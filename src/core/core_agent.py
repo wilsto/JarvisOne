@@ -57,22 +57,33 @@ class CoreAgent:
         prompt = self._build_prompt(user_query)
         
         # On demande au LLM de générer une réponse
-        formatted_query = self.llm.generate_response(prompt)
+        llm_response = self.llm.generate_response(prompt)
+        
+        # Si pas d'outils, on utilise directement la réponse du LLM
+        content = llm_response
         
         # Exécution des outils (s'il y en a)
-        content = None
         if self.tools:
             for tool in self.tools:
                 try:
-                    content = tool(formatted_query)  # Use LLM formatted query
+                    content = tool(llm_response)  # Use LLM response
                 except Exception as e:
                     logger.error(f"Error while executing tool {tool.__name__} : {e}")
                     content = []
 
+        # Si on a un formateur de sortie, on l'utilise
         if self.output_formatter:
             if content is not None:
-                content = self.output_formatter(content, formatted_query)
+                content = self.output_formatter(content, llm_response)
             else:
                 content = {"error": "No tool output available"}
+        # Sinon, on retourne un dict avec la réponse du LLM
+        else:
+            content = {
+                "content": content,
+                "metadata": {
+                    "raw_response": llm_response
+                }
+            }
 
-        return content  # Return the formatted content directly
+        return content

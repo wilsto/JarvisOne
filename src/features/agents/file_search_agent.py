@@ -4,6 +4,8 @@ import logging
 import os
 from pathlib import Path
 import streamlit as st
+import pyperclip
+from typing import List
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -22,8 +24,30 @@ except Exception as e:
     logger.error(f"Error reading everything.md from {docs_path}: {str(e)}")
     everything_docs = "Documentation not available"
 
-def execute_search(query: str) -> list:
-    """Execute an Everything search command and return the results."""
+def clean_llm_response(response: str) -> str:
+    """Clean LLM response to ensure strict format."""
+    # Remove common prefixes and formatting
+    response = response.lower().strip()
+    prefixes_to_remove = [
+        "user query:", "output:", "correct query:",
+        "query:", "formatted query:", "everything query:",
+        "`", "'", '"'
+    ]
+    
+    for prefix in prefixes_to_remove:
+        if response.startswith(prefix):
+            response = response[len(prefix):].strip()
+    
+    # Remove any trailing formatting
+    response = response.rstrip('`\'" ')
+    
+    return response
+
+def execute_search(query: str) -> List[str]:
+    """Execute Everything search with the formatted query."""
+    # Clean the query first
+    query = clean_llm_response(query)
+    
     try:
         # Path to Everything CLI executable
         es_path = "C:\\Program Files\\Everything\\es.exe"
@@ -76,72 +100,115 @@ def launch_everything_gui(query: str):
     except Exception as e:
         logger.error(f"Failed to launch Everything GUI: {str(e)}")
 
-def format_result(content: list, formatted_query: str) -> dict:
-    """Format search results for display.
+def format_result(results: List[str], query: str) -> None:
+    """Format and display search results using Streamlit."""
     
-    Args:
-        content: List of search results from execute_search
-        formatted_query: The query formatted by the LLM
+    # Style CSS pour les résultats
+    st.markdown("""
+        <style>
+        .result-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            margin: 2px 0;
+        }
+        .result-number {
+            min-width: 40px;
+            font-weight: bold;
+            color: #555;
+        }
+        .result-content {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        .file-name {
+            font-weight: bold;
+            color: #1f1f1f;
+        }
+        .file-path {
+            color: #666;
+            font-size: 0.85em;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Conteneur principal avec padding minimal
+    with st.container():
+        # En-tête compact
+        col1, col2 = st.columns([9, 1])
+        with col1:
+            with st.expander("ℹ️ Informations de recherche", expanded=False):
+                st.code(query, language="text")
+        with col2:
+            st.metric("Résultats", len(results), label_visibility="visible")
         
-    Returns:
-        dict: Formatted response with content and metadata
-    """
-    if not content:
-        logger.info("No results found")
-        return {
-            "content": "Aucun résultat trouvé.",
-            "metadata": {
-                "total_results": 0,
-                "has_more": False,
-                "formatted_query": formatted_query
-            }
-        }
-    
-    total_results = len(content)
-    displayed_results = [f"\n• {file_path}" for file_path in content[:10]]
-    
-    # Format response
-    formatted = [
-        f"\nRecherche effectuée : {formatted_query}",
-        f"\nNombre total de résultats : {total_results}",
-        "\n"
-    ]
-    
-    formatted.extend(displayed_results)
-    
-    if total_results > 10:
-        formatted.append(f"\n... et {total_results - 10} autres résultats")
-    
-    logger.info(f"Formatted {total_results} results for query: {formatted_query}")
-    for i, file_path in enumerate(content[:10], 1):
-        logger.info(f"{i}. {file_path}")
-    
-    # Add Everything GUI button with formatted query
-    st.button("🔍 Ouvrir dans Everything", 
-             on_click=launch_everything_gui, 
-             args=(formatted_query,),
-             help="Ouvre Everything avec cette recherche")
-    
-    return {
-        "content": "\n".join(formatted),
-        "metadata": {
-            "total_results": total_results,
-            "has_more": total_results > 10,
-            "results": content,
-            "formatted_query": formatted_query
-        }
-    }
+        # Affichage des résultats
+        for i, result in enumerate(results, 1):
+            file_path = result.strip()
+            file_name = os.path.basename(file_path)
+            dir_path = os.path.dirname(file_path)
+            
+            # Utilisation de colonnes pour un layout horizontal
+            cols = st.columns([0.4, 5, 0.6])
+            
+            with cols[0]:
+                # Numéro plus grand pour les 10 premiers résultats
+                if i <= 10:
+                    st.markdown(f"<h3 style='margin: 0; color: #555;'>#{i}</h3>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<div style='color: #666;'>#{i}</div>", unsafe_allow_html=True)
+            
+            with cols[1]:
+                # Nom de fichier et chemin sur une seule ligne
+                st.markdown(
+                    f"<div style='line-height: 1.2;'>"
+                    f"<span class='file-name'>{file_name}</span><br/>"
+                    f"<span class='file-path'>{dir_path}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+            
+            with cols[2]:
+                if st.button("📋", key=f"copy_{i}", help="Copier le chemin"):
+                    pyperclip.copy(file_path)
+                    st.toast("Chemin copié !", icon="✅")
+        
+        # Bouton Everything en bas
+        st.button("🔍 Ouvrir dans Everything", 
+                 key="open_everything", 
+                 use_container_width=True,
+                 on_click=launch_everything_gui,
+                 args=(query,))
 
 agent = CoreAgent(
     agent_name="File Search Agent",
     system_instructions=[
-        "You are a file search query analyzer. Format search queries for Everything search engine.",
-        "Convert natural language to Everything syntax using the following documentation:",
+        "You are a file search query analyzer for the Everything search engine.",
+        "Convert natural language to Everything search syntax.",
+        "Use this documentation:",
         "",
         everything_docs,
         "",
-        "After formatting the query, I will execute it using Everything search engine.",
-        "Return ONLY the formatted query, nothing else."
+        "CRITICAL OUTPUT FORMAT RULES:",
+        "1. Output ONLY the raw query string",
+        "2. NO prefixes like 'Output:', 'Query:', etc.",
+        "3. NO formatting (no quotes, backticks, parentheses)",
+        "4. NO explanations or comments",
+        "5. NO line breaks or extra spaces",
+        "",
+        "INCORRECT OUTPUTS:",
+        "❌ Output: ext:py dm:today",
+        "❌ `ext:py dm:today`",
+        "❌ Query: ext:py dm:today",
+        "❌ ext:py dm:today (python files from today)",
+        "",
+        "CORRECT OUTPUTS:",
+        "✓ ext:py dm:today",
+        "✓ ext:jpg;png size:>1mb",
+        "✓ ext:doc;docx;pdf path:c:\\projects",
+        "",
+        "ANY OUTPUT NOT FOLLOWING THESE RULES EXACTLY WILL BE REJECTED.",
+        "REMEMBER: RETURN ONLY THE RAW QUERY STRING."
     ],
     tools=[execute_search],
     output_formatter=format_result

@@ -19,21 +19,32 @@ def analyze_query_tool(query: str, llm: LLM) -> str:
     """
     # Créer un prompt pour l'analyse
     prompt = f"""Analyser la requête suivante et déterminer l'agent le plus approprié:
-    {query}
+    "{query}"
     
-    Si la requête concerne la recherche de fichiers, répondre 'file_search_agent'.
-    Sinon, répondre 'chat_agent'.
+    Règles de sélection :
+    1. Utiliser 'file_search_agent' si la requête :
+       - Concerne la recherche ou manipulation de fichiers
+       - Contient des mots comme : fichier, file, trouve, cherche, search, modifié, créé
+       - Mentionne des extensions (.py, .txt, etc.) ou types de fichiers (python, text, etc.)
+       
+    2. Utiliser 'chat_agent' si :
+       - C'est une question générale
+       - Demande des explications ou informations
+       - Ne concerne pas la recherche de fichiers
+    
+    Répondre UNIQUEMENT avec 'file_search_agent' ou 'chat_agent'.
     """
     
     # Utiliser le LLM partagé pour analyser
     response = llm.generate_response(prompt).lower().strip()
+    logger.info(f"Query: '{query}' → Agent selected: '{response}'")
     
     # Vérifier si la réponse est un agent valide
     if response in ['file_search_agent', 'chat_agent']:
         return response
     
     # Par défaut, utiliser l'agent de chat
-    logger.info(f"Agent non reconnu '{response}', utilisation de chat_agent par défaut")
+    logger.warning(f"Agent non reconnu '{response}', utilisation de chat_agent par défaut")
     return "chat_agent"
 
 # Créer une instance de l'agent d'analyse

@@ -1,7 +1,7 @@
 """Process and route user chat inputs to appropriate agents."""
 
 import logging
-from typing import Dict, Any
+from typing import Any
 import streamlit as st
 
 from .agents.agent_orchestrator import AgentOrchestrator
@@ -29,16 +29,36 @@ class ChatProcessor:
             st.session_state.messages = []
             logger.info("Created new messages list in session state")
     
-    def _format_response(self, response: Dict[str, Any]) -> str:
-        """Format the response for display in chat."""
-        if "error" in response:
-            error_msg = f"❌ {response['message']}"
-            logger.warning(f"Error in response: {error_msg}")
-            return error_msg
+    def _format_response(self, response: Any) -> str:
+        """Format the response for display in chat.
         
-        formatted = str(response["content"])
+        Args:
+            response: Response from agent, can be:
+                - Dict with 'content' or 'error' key
+                - String (direct LLM response)
+                - None (error case)
+        
+        Returns:
+            str: Formatted response ready for display
+        """
+        # Handle None case
+        if response is None:
+            error_msg = "❌ Pas de réponse de l'agent"
+            logger.warning("Agent returned None response")
+            return error_msg
+            
+        # Handle dict case
+        if isinstance(response, dict):
+            if "error" in response:
+                error_msg = f"❌ {response['error']}"
+                logger.warning(f"Error in response: {error_msg}")
+                return error_msg
+            
+            if "content" in response:
+                return str(response["content"])
                 
-        return formatted
+        # Handle string or other cases
+        return str(response)
     
     def process_user_input(self, user_input: str) -> str:
         """Process user input through the orchestrator and return formatted response."""
