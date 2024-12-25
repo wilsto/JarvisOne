@@ -1,0 +1,7 @@
+streamlit==1.41.1
+phidata==2.7.5
+openai==1.58.1
+python-dotenv==1.0.1
+anthropic
+google-generativeai
+ollama

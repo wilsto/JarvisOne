@@ -1,0 +1,4 @@
+{
+  "provider": "Anthropic",
+  "model": "claude-3-haiku"
+}
