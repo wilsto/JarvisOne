@@ -1,4 +1,4 @@
-from core.core_agent import CoreAgent, DummyLLM # Import the CoreAgent and DummyLLM
+from core.core_agent import CoreAgent # Import the CoreAgent
 
 everything_docs = "Documentation pour Everything..." # Replace this by your documentation
 
@@ -12,7 +12,6 @@ def search_function(query: str):
 
 def format_result(content):
     return f"Formatted: {content}"
-
 
 agent = CoreAgent(
     agent_name="File Search Agent",

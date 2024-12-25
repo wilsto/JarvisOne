@@ -75,6 +75,7 @@ JarvisOne/
 └── requirements.txt       # Python dependencies
 
 ## Tech Stack
+- Use Uv for Python development
 - Python 3.12
 - Streamlit 1.31+
 - LangChain (À conserver pour plus tard)

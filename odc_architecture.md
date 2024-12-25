@@ -23,7 +23,7 @@
 *   **Flux de Traitement:**
     *   La requête utilisateur est traitée en respectant le schéma décrit dans la section 'High-Level Flow' du README.
 *   **Agents :**
-    *   Utilisation d'agents Phidata pour l'analyse des requêtes et la recherche de fichiers.
+    *   Utilisation d'agents intelligents pour l'analyse des requêtes et la recherche de fichiers.
     *   `query_analyzer_agent.py` pour l'analyse des requêtes.
     *   `file_search_agent.py` pour l'interaction avec l'outil `everything`.
 *  **Interface Utilisateur :**

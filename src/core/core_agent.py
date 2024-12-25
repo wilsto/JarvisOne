@@ -1,15 +1,19 @@
-from abc import ABC, abstractmethod
+"""Core agent implementation."""
 
-# Définition d'une classe abstraite pour les modèles LLM
-class LLM(ABC):
-    @abstractmethod
-    def generate_response(self, prompt: str) -> str:
-        pass
+from .llm_base import LLM
+from .llm_manager import get_llm_model
 
-# Implémentation basique d'un LLM qui ne fait qu'echo
-class DummyLLM(LLM):
+# Implémentation du LLM utilisant le gestionnaire de modèles
+class ManagedLLM(LLM):
+    def __init__(self):
+        self.model = get_llm_model()
+    
     def generate_response(self, prompt: str) -> str:
-        return f"Réponse du DummyLLM:\n{prompt}"
+        try:
+            response = self.model.generate_response(prompt)
+            return response
+        except Exception as e:
+            return f"Error generating response: {str(e)}"
 
 class CoreAgent:
     def __init__(self, agent_name: str, system_instructions: str, 
@@ -29,15 +33,13 @@ class CoreAgent:
         self.system_instructions = system_instructions
         self.tools = tools if tools else []
         self.output_formatter = output_formatter
-        self.llm = llm if llm else DummyLLM()
-
+        self.llm = llm if llm else ManagedLLM()
 
     def _build_prompt(self, user_query: str) -> str:
         """
         Construit le prompt pour le LLM.
         """
         return f"{self.system_instructions}\n\nUser Query: {user_query}"
-
 
     def run(self, user_query: str) -> dict:
         """
@@ -63,7 +65,6 @@ class CoreAgent:
                    content = f"{content}\n\n Output from tool {tool.__name__}:\n {tool_output}"
                 except Exception as e:
                     content = f"{content}\n\n Error while executing tool {tool.__name__} : {e}"
-
 
         if self.output_formatter:
              content = self.output_formatter(content)

@@ -2,11 +2,18 @@
 
 import logging
 import streamlit as st
-from phi.model.openai import OpenAIChat
-from phi.model.anthropic import Claude
-from phi.model.ollama import Ollama
-from phi.model.google import Gemini
+from typing import Optional
+import requests
+from openai import OpenAI
+import anthropic
+from google.generativeai import GenerativeModel
+import google.generativeai as genai
+from .llm_base import LLM
 from .config_manager import ConfigManager
+from .llm_utils import (
+    llm_cache, retry_on_error, API_KEYS,
+    DEFAULT_PARAMS, OLLAMA_DEFAULT_MODELS
+)
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -34,7 +41,152 @@ def update_llm_preferences():
     ConfigManager.save_llm_preferences(provider, model)
     logger.info(f"LLM preferences updated: provider={provider}, model={model}")
 
-def get_llm_model():
+class OpenAILLM(LLM):
+    def __init__(self, model: str):
+        self.model = model
+        if not API_KEYS['openai']:
+            raise ValueError("OpenAI API key not found in environment")
+        self.client = OpenAI(api_key=API_KEYS['openai'])
+        
+    @retry_on_error()
+    def generate_response(self, prompt: str) -> str:
+        # Check cache first
+        cached = llm_cache.get(prompt, self.model)
+        if cached:
+            return cached
+            
+        try:
+            # Create a streaming completion
+            stream = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=DEFAULT_PARAMS['temperature'],
+                max_tokens=DEFAULT_PARAMS['max_tokens'],
+                presence_penalty=DEFAULT_PARAMS['presence_penalty'],
+                frequency_penalty=DEFAULT_PARAMS['frequency_penalty'],
+                stream=True
+            )
+            
+            # Collect streamed response
+            collected_messages = []
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    collected_messages.append(chunk.choices[0].delta.content)
+                    
+            full_response = "".join(collected_messages)
+            
+            # Cache the response
+            llm_cache.set(prompt, self.model, full_response)
+            return full_response
+            
+        except Exception as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            raise
+
+class AnthropicLLM(LLM):
+    def __init__(self, model: str):
+        self.model = model
+        if not API_KEYS['anthropic']:
+            raise ValueError("Anthropic API key not found in environment")
+        self.client = anthropic.Client(api_key=API_KEYS['anthropic'])
+        
+    @retry_on_error()
+    def generate_response(self, prompt: str) -> str:
+        # Check cache first
+        cached = llm_cache.get(prompt, self.model)
+        if cached:
+            return cached
+            
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=DEFAULT_PARAMS['max_tokens'],
+                temperature=DEFAULT_PARAMS['temperature'],
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            result = response.content[0].text
+            
+            # Cache the response
+            llm_cache.set(prompt, self.model, result)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Anthropic API error: {str(e)}")
+            raise
+
+class GeminiLLM(LLM):
+    def __init__(self, model: str):
+        self.model = model
+        if not API_KEYS['google']:
+            raise ValueError("Google API key not found in environment")
+        genai.configure(api_key=API_KEYS['google'])
+        self.client = GenerativeModel(model)
+        
+    @retry_on_error()
+    def generate_response(self, prompt: str) -> str:
+        # Check cache first
+        cached = llm_cache.get(prompt, self.model)
+        if cached:
+            return cached
+            
+        try:
+            response = self.client.generate_content(
+                prompt,
+                generation_config={
+                    "temperature": DEFAULT_PARAMS['temperature'],
+                    "max_output_tokens": DEFAULT_PARAMS['max_tokens'],
+                }
+            )
+            
+            result = response.text
+            
+            # Cache the response
+            llm_cache.set(prompt, self.model, result)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Google API error: {str(e)}")
+            raise
+
+class OllamaLLM(LLM):
+    def __init__(self, model: str):
+        self.model = model
+        self.base_url = "http://localhost:11434/api"
+        
+    @retry_on_error()
+    def generate_response(self, prompt: str) -> str:
+        # Check cache first
+        cached = llm_cache.get(prompt, self.model)
+        if cached:
+            return cached
+            
+        try:
+            response = requests.post(
+                f"{self.base_url}/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": DEFAULT_PARAMS['temperature'],
+                        "num_predict": DEFAULT_PARAMS['max_tokens'],
+                    }
+                }
+            )
+            response.raise_for_status()
+            
+            result = response.json()["response"]
+            
+            # Cache the response
+            llm_cache.set(prompt, self.model, result)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Ollama API error: {str(e)}")
+            raise
+
+def get_llm_model() -> LLM:
     """Get the appropriate LLM model based on configuration."""
     # Initialize session state if needed
     init_session_state()
@@ -64,32 +216,15 @@ def get_llm_model():
             logger.error(f"Fallback also failed: {str(fallback_error)}")
             raise RuntimeError("Could not initialize any LLM model")
 
-def _initialize_model(provider: str, model: str):
+def _initialize_model(provider: str, model: str) -> LLM:
     """Initialize a specific LLM model."""
     if provider == "OpenAI":
-        return OpenAIChat(
-            model=model or "gpt-4o-mini",
-            temperature=0.7,
-            max_tokens=2000,
-            streaming=True
-        )
+        return OpenAILLM(model or "gpt-4o-mini")
     elif provider == "Anthropic":
-        return Claude(
-            model=model or "claude-2",
-            temperature=0.7,
-            max_tokens=2000
-        )
+        return AnthropicLLM(model or "claude-2")
     elif provider == "Google":
-        return Gemini(
-            model=model or "gemini-pro",
-            temperature=0.7,
-            max_tokens=2000
-        )
+        return GeminiLLM(model or "gemini-pro")
     elif provider == "Ollama (Local)":
-        return Ollama(
-            model=model or "mistral:latest",
-            temperature=0.7,
-            max_tokens=2000
-        )
+        return OllamaLLM(model or "mistral:latest")
     else:
         raise ValueError(f"Unknown provider: {provider}")

@@ -1,4 +1,4 @@
-from core.core_agent import CoreAgent, DummyLLM # Import the CoreAgent and DummyLLM
+from core.core_agent import CoreAgent # Import the CoreAgent
 
 agent = CoreAgent(
     agent_name="Chat Agent",

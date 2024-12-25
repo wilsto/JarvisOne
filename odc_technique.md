@@ -26,14 +26,14 @@
 *   **Langage et Plateforme :**
     *   Développer avec Python 3.12.
     *   Utiliser Streamlit 1.31+ pour l'interface utilisateur.
-    *   Utiliser Phidata 0.2.0+ pour la gestion des agents.
+    *   Utiliser des agents intelligents pour la gestion des agents.
+    *   Utiliser des modèles LLM avancés pour le traitement du langage naturel.
 
 ## Dépendances Techniques
 
 *   **Logiciels et Librairies:**
     *   Python 3.12.
     *   Streamlit 1.31+
-    *   Phidata 0.2.0+
     *   `Everything` - Pour la recherche de fichiers.
 *   **Outils Externes :**
     *   `C:\Program Files\Everything\es.exe` (Chemin spécifique pour l'exécution de l'outil `everything`).

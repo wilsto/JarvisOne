@@ -2,8 +2,8 @@ import logging
 from typing import Dict, Any
 import importlib
 import pkgutil
-from core.core_agent import CoreAgent, DummyLLM
-from .query_analyzer_agent import analyze_query_tool, agent as query_analyzer_agent  # Import the analyzer function and agent
+from core.core_agent import CoreAgent
+from .query_analyzer_agent import analyze_query_tool, agent as query_analyzer_agent
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class AgentOrchestrator:
                 for item_name in module.__dict__.keys():
                      item = module.__dict__[item_name]
                      if isinstance(item, CoreAgent):
-                        available_agents[name.lower()] = item
+                        available_agents[name.replace("_agent", "")] = item
         
         return available_agents
 
@@ -37,14 +37,18 @@ class AgentOrchestrator:
         try:
             agent_name = analyze_query_tool(user_query)
             logger.info(f"Query analyzer identified agent: {agent_name}")
-            if agent_name in self.available_agents:
-                 return self.available_agents[agent_name]
+            
+            # Normalize agent name by removing _agent suffix if present
+            normalized_name = agent_name.replace("_agent", "")
+            
+            if normalized_name in self.available_agents:
+                return self.available_agents[normalized_name]
             else:
-               logger.warning(f"No agent found for query: {user_query}. Defaulting to Chat Agent")
-               return self.available_agents["chat_agent"] # Return default agent
+                logger.warning(f"No agent found for name: {agent_name}. Defaulting to Chat Agent")
+                return self.available_agents["chat"]
         except Exception as e:
             logger.error(f"Error in agent selection: {str(e)}", exc_info=True)
-            return self.available_agents["chat_agent"] # Return default agent in case of error
+            return self.available_agents["chat"]
 
     def process_query(self, user_query: str) -> Dict[str, Any]:
         """Process a user query by routing it to the appropriate agent."""
@@ -56,4 +60,4 @@ class AgentOrchestrator:
             return response
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}", exc_info=True)
-            return {"error": True, "message": f"An error occurred while processing your request with agent '{selected_agent.agent_name}'."}
+            return {"error": True, "message": f"An error occurred while processing your request."}

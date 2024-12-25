@@ -1,7 +1,14 @@
+# Interface utilisateur
 streamlit==1.41.1
-phidata==2.7.5
-openai==1.58.1
-python-dotenv==1.0.1
-anthropic
-google-generativeai
-ollama
+
+# LLM Providers
+openai>=1.0.0,<2.0.0
+anthropic>=0.5.0,<1.0.0
+google-generativeai>=0.3.0,<1.0.0
+
+# Utilitaires
+python-dotenv>=1.0.0,<2.0.0
+requests>=2.31.0,<3.0.0
+
+# Local LLM
+ollama>=0.1.0,<1.0.0
