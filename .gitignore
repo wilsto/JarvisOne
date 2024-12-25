@@ -34,6 +34,7 @@ ENV/
 # Logs
 *.log
 log/
+.cache/
 
 # Local configuration
 .env

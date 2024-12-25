@@ -1,17 +1,18 @@
 import logging
 from core.core_agent import CoreAgent
-from core.llm_manager import get_llm_model
+from core.llm_base import LLM
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def analyze_query_tool(query: str) -> str:
+def analyze_query_tool(query: str, llm: LLM) -> str:
     """
     Outil d'analyse de requête pour déterminer l'agent approprié.
     
     Args:
         query: La requête de l'utilisateur.
+        llm: Instance LLM partagée à utiliser.
         
     Returns:
         Le nom de l'agent à utiliser.
@@ -24,8 +25,7 @@ def analyze_query_tool(query: str) -> str:
     Sinon, répondre 'chat_agent'.
     """
     
-    # Utiliser le LLM pour analyser
-    llm = get_llm_model()
+    # Utiliser le LLM partagé pour analyser
     response = llm.generate_response(prompt).lower().strip()
     
     # Vérifier si la réponse est un agent valide
@@ -44,6 +44,8 @@ agent = CoreAgent(
 )
 
 if __name__ == '__main__':
+    from core.llm_manager import get_llm_model
+    llm = get_llm_model()
     query = "cherche un fichier pdf"
-    response = analyze_query_tool(query)
+    response = analyze_query_tool(query, llm)
     print(f"Agent sélectionné: {response}")

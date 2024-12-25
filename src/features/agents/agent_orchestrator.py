@@ -2,7 +2,10 @@ import logging
 from typing import Dict, Any
 import importlib
 import pkgutil
+import streamlit as st
 from core.core_agent import CoreAgent
+from core.config_manager import ConfigManager
+from core.llm_manager import get_llm_model
 from .query_analyzer_agent import analyze_query_tool, agent as query_analyzer_agent
 
 # Configuration du logger
@@ -14,6 +17,18 @@ class AgentOrchestrator:
 
     def __init__(self):
         """Initializes the orchestrator with available agents."""
+        # Load LLM preferences
+        preferences = ConfigManager.load_llm_preferences()
+        if preferences:
+            logger.info(f"Loaded LLM preferences: {preferences}")
+            # Update session state with loaded preferences
+            st.session_state.llm_provider = preferences["provider"]
+            st.session_state.llm_model = preferences["model"]
+        
+        # Initialize shared LLM instance
+        self.llm = get_llm_model()
+        logger.info(f"Initialized shared LLM instance: {self.llm.__class__.__name__}")
+        
         self.query_analyzer = query_analyzer_agent
         self.available_agents = self._load_agents()
         logger.info(f"AgentOrchestrator initialized with agents: {list(self.available_agents.keys())}")
@@ -28,6 +43,8 @@ class AgentOrchestrator:
                 for item_name in module.__dict__.keys():
                      item = module.__dict__[item_name]
                      if isinstance(item, CoreAgent):
+                        # Pass shared LLM instance to agent
+                        item.llm = self.llm
                         available_agents[name.replace("_agent", "")] = item
         
         return available_agents
@@ -35,7 +52,8 @@ class AgentOrchestrator:
     def _select_agent(self, user_query: str) -> CoreAgent:
         """Selects the appropriate agent based on user query."""
         try:
-            agent_name = analyze_query_tool(user_query)
+            # Pass shared LLM instance to analyzer
+            agent_name = analyze_query_tool(user_query, self.llm)
             logger.info(f"Query analyzer identified agent: {agent_name}")
             
             # Normalize agent name by removing _agent suffix if present
@@ -51,13 +69,13 @@ class AgentOrchestrator:
             return self.available_agents["chat"]
 
     def process_query(self, user_query: str) -> Dict[str, Any]:
-        """Process a user query by routing it to the appropriate agent."""
+        """Process a user query through the appropriate agent."""
         try:
-            selected_agent = self._select_agent(user_query)
-            logger.info(f"Selected agent: {selected_agent.agent_name}")
-            response = selected_agent.run(user_query)
-            logger.info(f"Response from agent '{selected_agent.agent_name}': {response}")
+            agent = self._select_agent(user_query)
+            logger.info(f"Selected agent: {agent.agent_name}")
+            response = agent.run(user_query)
+            logger.info(f"Response from agent '{agent.agent_name}': {response}")
             return response
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}", exc_info=True)
-            return {"error": True, "message": f"An error occurred while processing your request."}
+            return {"error": True, "message": str(e)}

@@ -1,6 +1,0 @@
-{
-  "prompt": "Tu es un assistant chat qui répond aux questions.\n\nUser Query: combien de roues a une voiture ?\n\n",
-  "model": "gpt-4o-mini",
-  "response": "Une voiture standard a généralement quatre roues. Cependant, certaines voitures, comme les véhicules tout-terrain ou les voitures de course, peuvent avoir une configuration différente.",
-  "timestamp": 1735159814.2914867
-}

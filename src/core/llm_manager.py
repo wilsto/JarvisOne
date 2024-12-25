@@ -188,33 +188,32 @@ class OllamaLLM(LLM):
 
 def get_llm_model() -> LLM:
     """Get the appropriate LLM model based on configuration."""
-    # Initialize session state if needed
-    init_session_state()
-    
-    # Log current state
-    logger.info("Current session state:")
-    for key, value in st.session_state.items():
-        logger.info(f"  {key}: {value}")
-    
-    provider = st.session_state.llm_provider
-    model = st.session_state.llm_model
-    
     try:
-        # Tenter d'initialiser le modèle configuré
-        llm = _initialize_model(provider, model)
-        update_llm_preferences()  # Sauvegarder uniquement si succès
-        return llm
+        # Utiliser les préférences du session state
+        if "llm_provider" in st.session_state and "llm_model" in st.session_state:
+            provider = st.session_state.llm_provider
+            model = st.session_state.llm_model
+            logger.info(f"Using LLM from session state: {provider}/{model}")
+        else:
+            # Charger depuis le fichier si pas dans le session state
+            preferences = ConfigManager.load_llm_preferences()
+            if preferences and "provider" in preferences:
+                provider = preferences["provider"]
+                model = preferences["model"]
+                logger.info(f"Using LLM from preferences file: {provider}/{model}")
+            else:
+                # Utiliser les valeurs par défaut
+                provider = "Ollama (Local)"
+                model = "mistral:latest"
+                logger.info(f"Using default LLM: {provider}/{model}")
+        
+        return _initialize_model(provider, model)
+        
     except Exception as e:
-        logger.error(f"Error initializing {provider} model {model}: {str(e)}")
-        # Tenter le fallback vers Ollama
-        try:
-            logger.info("Attempting fallback to Ollama (Local)/mistral:latest")
-            st.session_state.llm_provider = "Ollama (Local)"
-            st.session_state.llm_model = "mistral:latest"
-            return _initialize_model("Ollama (Local)", "mistral:latest")
-        except Exception as fallback_error:
-            logger.error(f"Fallback also failed: {str(fallback_error)}")
-            raise RuntimeError("Could not initialize any LLM model")
+        logger.error(f"Error getting LLM model: {str(e)}")
+        # Fallback to Ollama
+        logger.info("Falling back to Ollama/mistral")
+        return _initialize_model("Ollama (Local)", "mistral:latest")
 
 def _initialize_model(provider: str, model: str) -> LLM:
     """Initialize a specific LLM model."""

@@ -25,7 +25,7 @@ BASE_CONFIG = {
     },
     "Anthropic": {
         "models": {
-            "claude-3-haiku": {
+            "claude-3-haiku-20240307": {
                 "name": "Claude 3 Haiku",
                 "description": "Version rapide et efficace de Claude",
                 "context_length": 200000,
@@ -33,11 +33,11 @@ BASE_CONFIG = {
             }
         },
         "requires_api_key": True,
-        "default_model": "claude-3-haiku"
+        "default_model": "claude-3-haiku-20240307"
     },
     "Google": {
         "models": {
-            "gemini-2.0-flash-experimental": {
+            "gemini-2.0-flash-exp": {
                 "name": "Gemini 2.0 Flash",
                 "description": "Version expérimentale ultra-rapide de Gemini",
                 "context_length": 32768,
@@ -45,7 +45,7 @@ BASE_CONFIG = {
             }
         },
         "requires_api_key": True,
-        "default_model": "gemini-2.0-flash-experimental"
+        "default_model": "gemini-2.0-flash-exp"
     }
 }
 
