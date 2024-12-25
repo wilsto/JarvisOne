@@ -4,6 +4,4 @@ trouve moi les fichiers word modifiés aujourd'hui
 combien de roues a une voiture ?
 
 
-e
-
 je viens d'écrire plein de code , tu un dev relecteur aggeuri en python , regarde la logique et les appels de tous les fichiers de src\features et fais moi un résumé

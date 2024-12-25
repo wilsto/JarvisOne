@@ -2,6 +2,8 @@
 
 from .llm_base import LLM
 from .llm_manager import get_llm_model
+import logging
+logger = logging.getLogger(__name__)
 
 # Implémentation du LLM utilisant le gestionnaire de modèles
 class ManagedLLM(LLM):
@@ -55,17 +57,22 @@ class CoreAgent:
         prompt = self._build_prompt(user_query)
         
         # On demande au LLM de générer une réponse
-        content = self.llm.generate_response(prompt)
-
+        formatted_query = self.llm.generate_response(prompt)
+        
         # Exécution des outils (s'il y en a)
+        content = None
         if self.tools:
             for tool in self.tools:
                 try:
-                   tool_output = tool(user_query)
-                   content = f"{content}\n\n Output from tool {tool.__name__}:\n {tool_output}"
+                    content = tool(formatted_query)  # Use LLM formatted query
                 except Exception as e:
-                    content = f"{content}\n\n Error while executing tool {tool.__name__} : {e}"
+                    logger.error(f"Error while executing tool {tool.__name__} : {e}")
+                    content = []
 
         if self.output_formatter:
-             content = self.output_formatter(content)
-        return {"content": content}
+            if content is not None:
+                content = self.output_formatter(content, formatted_query)
+            else:
+                content = {"error": "No tool output available"}
+
+        return content  # Return the formatted content directly
