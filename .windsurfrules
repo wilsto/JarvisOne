@@ -1,7 +1,9 @@
 # JarvisOne
 
 ## Project Context
+
 JarvisOne is a modular and scalable conversational AI assistant.
+
 - Uses multiple LLM models (Gemini 2.0, ChatGPT-4, Ollama) for increased flexibility (À conserver pour plus tard)
 - Integrates RAG (Retrieval-Augmented Generation) capabilities for enhanced contextualization (À conserver pour plus tard)
 - Designed with a modular architecture allowing easy addition of new features
@@ -13,45 +15,48 @@ JarvisOne is a modular and scalable conversational AI assistant.
 ## Architectural Logic
 
 ### High-Level Flow (Target)
-The target system follows a specific flow for each user request, starting with a user query and ending with a final response. 
+
+The target system follows a specific flow for each user request, starting with a user query and ending with a final response.
 This flow includes caching, context construction, input and output safeguards, and access to both internal and external data sources.
 
-1.  **User Query:** The process begins with a natural language query from the user via the chat interface.
-2.  **Initial Cache Lookup:** Before processing the query, the system checks a local cache to see if a similar query has been processed before. If a cached response is available, it is returned immediately.
-3.  **Context Construction:** If the query is not cached, it goes through a context construction phase. This involves:
-    *   **RAG (Retrieval-Augmented Generation):** Retrieving relevant information from external sources to enrich the query context. (À conserver pour plus tard)
-    *   **Agent Interaction:** Using an intelligent agent to analyze the query and determine necessary actions.
-    *   **Query Rewriting:** Refining or rephrasing the query for better processing.
-4.  **Input Guardrails:** The enriched query is then passed through input guardrails for security. This includes actions like:
-    *   **PII Redaction:** Removing or masking personally identifiable information.
-5.  **Data Access and Retrieval:** Depending on the context, the system can access various data sources:
-    *   **Read-only Actions:** These allow retrieval of data from various sources:
-        *   **Vector Search:** Performing semantic searches based on vector representations of data. (À conserver pour plus tard)
-        *   **SQL Query Execution:** Running SQL queries against databases.
-        *   **Web Search:** Searching for relevant information on the web.
-    *   **Databases:** These contain persistent data such as:
-        *   Documents, tables, chat histories, vector databases, etc.
-6.  **Model Gateway:** The core of the system, handling:
-    *   **Model Catalog:** Managing and selecting different language models.
-    *   **Access Token Management:** Securely managing authentication tokens for the models.
-    *   **Routing:** Selecting the most appropriate model for the current query.
-    *   **Generation:** Using the chosen model to generate a response.
-    *   **Scoring:** Evaluating the quality of the generated response.
-7.  **Output Guardrails:** Before the response is returned, it is checked by output guardrails. This includes:
-    *   **Safety/Verification:** Ensuring the response is safe, ethical, and free of errors.
-    *   **Structured Outputs:** Formatting the response for easy use.
-8.  **Final Response:** The user receives the final response.
-9.  **Response Caching:** The final response is stored in the cache for future reuse.
+1. **User Query:** The process begins with a natural language query from the user via the chat interface.
+2. **Initial Cache Lookup:** Before processing the query, the system checks a local cache to see if a similar query has been processed before. If a cached response is available, it is returned immediately.
+3. **Context Construction:** If the query is not cached, it goes through a context construction phase. This involves:
+    - **RAG (Retrieval-Augmented Generation):** Retrieving relevant information from external sources to enrich the query context. (À conserver pour plus tard)
+    - **Agent Interaction:** Using an intelligent agent to analyze the query and determine necessary actions.
+    - **Query Rewriting:** Refining or rephrasing the query for better processing.
+4. **Input Guardrails:** The enriched query is then passed through input guardrails for security. This includes actions like:
+    - **PII Redaction:** Removing or masking personally identifiable information.
+5. **Data Access and Retrieval:** Depending on the context, the system can access various data sources:
+    - **Read-only Actions:** These allow retrieval of data from various sources:
+        - **Vector Search:** Performing semantic searches based on vector representations of data. (À conserver pour plus tard)
+        - **SQL Query Execution:** Running SQL queries against databases.
+        - **Web Search:** Searching for relevant information on the web.
+    - **Databases:** These contain persistent data such as:
+        - Documents, tables, chat histories, vector databases, etc.
+6. **Model Gateway:** The core of the system, handling:
+    - **Model Catalog:** Managing and selecting different language models.
+    - **Access Token Management:** Securely managing authentication tokens for the models.
+    - **Routing:** Selecting the most appropriate model for the current query.
+    - **Generation:** Using the chosen model to generate a response.
+    - **Scoring:** Evaluating the quality of the generated response.
+7. **Output Guardrails:** Before the response is returned, it is checked by output guardrails. This includes:
+    - **Safety/Verification:** Ensuring the response is safe, ethical, and free of errors.
+    - **Structured Outputs:** Formatting the response for easy use.
+8. **Final Response:** The user receives the final response.
+9. **Response Caching:** The final response is stored in the cache for future reuse.
 10. **Write Actions (Secondary):** If necessary, after the response is returned, the system may execute write actions to modify the state. This can include:
-    *   Updating orders, sending emails, etc.
+    - Updating orders, sending emails, etc.
 
 ## Repository File Structure
 
 JarvisOne/
-├── app.py                    # Main entry point
+├── main.py                   # Main entry point
 ├── config/                   # Configuration files
 │   └── config.yaml          # Main configuration file
 ├── data/                    # Data and embeddings
+├── docs/                    # Documentation
+│   └── everything.md        # Everything CLI documentation
 ├── log/                     # Log files
 ├── src/                     # Main source code
 │   ├── core/               # Core logic
@@ -72,9 +77,15 @@ JarvisOne/
 │       ├── streamlit_components.py # Streamlit components (À conserver pour plus tard)
 │       └── document_ui.py    # Document management interface (À conserver pour plus tard)
 ├── tests/                 # Unit and integration tests
-└── requirements.txt       # Python dependencies
+├── .env                   # Environment variables
+├── .gitignore            # Git ignore file
+├── LICENSE               # License file
+├── README.md             # Project documentation
+├── requirements.txt      # Python dependencies
+└── odc_*.md             # ODC documentation files
 
 ## Tech Stack
+
 - Use Uv for Python development
 - Python 3.12
 - Streamlit 1.31+
@@ -89,11 +100,13 @@ JarvisOne/
 - GTTS / SpeechRecognition (À conserver pour plus tard)
 
 ## Tools Used
-- Everything (https://www.voidtools.com/): File search tool. 
-    - Path : C:\Program Files\Everything\es.exe 
+
+- Everything (<https://www.voidtools.com/>): File search tool.
+  - Path : C:\Program Files\Everything\es.exe
     -Documentation Command line: docs\everything.md
 
 ## Interface Utilisateur avec Streamlit
+
 - Use Streamlit to create an interactive and responsive chat interface
 - Utilize Streamlit's built-in components for quick setup
 - Customize the appearance with Streamlit's themes
@@ -105,30 +118,7 @@ JarvisOne/
 - **Leverage external tool's interface for output whenever possible to avoid re-implementation. For example, `anything`'s output is displayed using its interface.**
 - **For tools that don't have an interface or where an integration is necessary, output will be redirected to the chat interface**
 
-## SOLID Principles
-
-### Single Responsibility Principle (SRP)
-
-- Each module, class, or function should have ONE and only one reason to change
-- Responsibilities should be clearly separated and encapsulated
-- Examples of responsibilities:
-  - Data access
-  - Business logic
-  - Error handling
-  - Configuration management
-  - UI rendering
-- Signs of SRP violation:
-  - A module handles multiple unrelated tasks
-  - Changes in one feature require modifications in unrelated code
-  - Complex initialization logic spread across multiple components
-- How to apply SRP:
-  - Create dedicated managers for specific concerns (e.g., LLMManager, ConfigManager)
-  - Keep UI components focused on rendering
-  - Separate data access from business logic
-  - Centralize error handling and logging
-  - Use dependency injection to manage dependencies
-
 ## Objectifs, Dépendances et Contraintes (ODC)
 
-*   Les ODC techniques sont documentées dans le fichier `odc_technique.md`.
-*   Les ODC d'architecture sont documentées dans le fichier `odc_architecture.md`.
+- Les ODC techniques sont documentées dans le fichier `odc_technique.md`.
+- Les ODC d'architecture sont documentées dans le fichier `odc_architecture.md`.
