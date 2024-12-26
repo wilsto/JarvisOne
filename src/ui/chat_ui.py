@@ -1,3 +1,5 @@
+"""Chat UI module for JarvisOne."""
+
 import streamlit as st
 from features.chat_processor import ChatProcessor
 from .components.sidebar import render_sidebar
@@ -23,40 +25,8 @@ def init_chat_session():
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": welcome_message}]
 
-def handle_suggestion_click(suggestion: str):
-    """Handle click on suggestion button."""
-    st.session_state.messages.append({"role": "user", "content": suggestion})
-    chat_processor = st.session_state.chat_processor
-    response = chat_processor.process_user_input(suggestion)
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    # Force refresh
-    st.rerun()
-
-def display_suggestions(suggestions: list):
-    """Display suggestion buttons in columns."""
-    if suggestions:
-        st.write("💡 Suggestions:")
-        # Créer des colonnes pour les boutons (3 par ligne)
-        cols = st.columns(min(3, len(suggestions)))
-        for idx, suggestion in enumerate(suggestions):
-            col_idx = idx % 3
-            with cols[col_idx]:
-                st.button(
-                    suggestion,
-                    key=f"suggestion_{idx}",
-                    on_click=handle_suggestion_click,
-                    args=(suggestion,),
-                    use_container_width=True
-                )
-
-def display_suggestions_new(suggestions: list):
-    """Display clickable suggestion buttons."""
-    for suggestion in suggestions:
-        if st.button(suggestion, key=f"suggestion_{suggestion}"):
-            st.session_state.messages.append({"role": "user", "content": suggestion})
-            st.rerun()
-
 def display_chat():
+    """Display the chat interface."""
     # Initialize chat processor
     chat_processor = init_chat_processor()
     
@@ -87,15 +57,6 @@ def display_chat():
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-            # Si c'est un message de l'assistant, extraire les suggestions
-            if message["role"] == "assistant" and "💡 Suggestions :" in message["content"]:
-                suggestions = [
-                    line.replace("• ", "").strip()
-                    for line in message["content"].split("\n")
-                    if line.startswith("• ")
-                ]
-                # Afficher les suggestions comme boutons
-                display_suggestions_new(suggestions)
 
     # Accept user input
     if prompt := st.chat_input("Parlez à JarvisOne"):
@@ -110,15 +71,6 @@ def display_chat():
         with st.chat_message("assistant"):
             response = chat_processor.process_user_input(prompt)
             st.markdown(response)
-            
-            # Extraire et afficher les suggestions comme boutons
-            if "💡 Suggestions :" in response:
-                suggestions = [
-                    line.replace("• ", "").strip()
-                    for line in response.split("\n")
-                    if line.startswith("• ")
-                ]
-                display_suggestions_new(suggestions)
             
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})

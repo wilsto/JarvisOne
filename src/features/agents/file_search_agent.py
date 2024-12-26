@@ -100,7 +100,7 @@ def launch_everything_gui(query: str):
     except Exception as e:
         logger.error(f"Failed to launch Everything GUI: {str(e)}")
 
-def format_result(results: List[str], query: str) -> None:
+def format_result(results: List[str], query: str) -> List[str]:
     """Format and display search results using Streamlit."""
     
     # Style CSS pour les résultats
@@ -179,6 +179,9 @@ def format_result(results: List[str], query: str) -> None:
                  use_container_width=True,
                  on_click=launch_everything_gui,
                  args=(query,))
+    
+    # Return the results for CoreAgent
+    return results
 
 agent = CoreAgent(
     agent_name="File Search Agent",

@@ -4,49 +4,13 @@
 
 JarvisOne is a modular and scalable conversational AI assistant.
 
-- Uses multiple LLM models (Gemini 2.0, ChatGPT-4, Ollama) for increased flexibility (À conserver pour plus tard)
+- Uses multiple LLM models (Gemini 2.0, ChatGPT-4, Ollama) for increased flexibility 
 - Integrates RAG (Retrieval-Augmented Generation) capabilities for enhanced contextualization (À conserver pour plus tard)
 - Designed with a modular architecture allowing easy addition of new features
 - Includes document management capabilities and user-friendly interface
 - **Core interface is a chat, allowing natural language interaction**
 - **Uses `everything` for file search functionality, leveraging its interface for output when appropriate.**
 - **Implements a layered architecture inspired by the provided diagram, ensuring modularity and security.**
-
-## Architectural Logic
-
-### High-Level Flow (Target)
-
-The target system follows a specific flow for each user request, starting with a user query and ending with a final response.
-This flow includes caching, context construction, input and output safeguards, and access to both internal and external data sources.
-
-1. **User Query:** The process begins with a natural language query from the user via the chat interface.
-2. **Initial Cache Lookup:** Before processing the query, the system checks a local cache to see if a similar query has been processed before. If a cached response is available, it is returned immediately.
-3. **Context Construction:** If the query is not cached, it goes through a context construction phase. This involves:
-    - **RAG (Retrieval-Augmented Generation):** Retrieving relevant information from external sources to enrich the query context. (À conserver pour plus tard)
-    - **Agent Interaction:** Using an intelligent agent to analyze the query and determine necessary actions.
-    - **Query Rewriting:** Refining or rephrasing the query for better processing.
-4. **Input Guardrails:** The enriched query is then passed through input guardrails for security. This includes actions like:
-    - **PII Redaction:** Removing or masking personally identifiable information.
-5. **Data Access and Retrieval:** Depending on the context, the system can access various data sources:
-    - **Read-only Actions:** These allow retrieval of data from various sources:
-        - **Vector Search:** Performing semantic searches based on vector representations of data. (À conserver pour plus tard)
-        - **SQL Query Execution:** Running SQL queries against databases.
-        - **Web Search:** Searching for relevant information on the web.
-    - **Databases:** These contain persistent data such as:
-        - Documents, tables, chat histories, vector databases, etc.
-6. **Model Gateway:** The core of the system, handling:
-    - **Model Catalog:** Managing and selecting different language models.
-    - **Access Token Management:** Securely managing authentication tokens for the models.
-    - **Routing:** Selecting the most appropriate model for the current query.
-    - **Generation:** Using the chosen model to generate a response.
-    - **Scoring:** Evaluating the quality of the generated response.
-7. **Output Guardrails:** Before the response is returned, it is checked by output guardrails. This includes:
-    - **Safety/Verification:** Ensuring the response is safe, ethical, and free of errors.
-    - **Structured Outputs:** Formatting the response for easy use.
-8. **Final Response:** The user receives the final response.
-9. **Response Caching:** The final response is stored in the cache for future reuse.
-10. **Write Actions (Secondary):** If necessary, after the response is returned, the system may execute write actions to modify the state. This can include:
-    - Updating orders, sending emails, etc.
 
 ## Repository File Structure
 
@@ -110,7 +74,7 @@ JarvisOne/
 - Use Streamlit to create an interactive and responsive chat interface
 - Utilize Streamlit's built-in components for quick setup
 - Customize the appearance with Streamlit's themes
-- Implement a responsive layout using `st.columns` and `st.tabs` (On va commencer simple)
+- Implement a responsive layout using `st.columns` and `st.tabs` 
 - Use `st.session_state` for state management
 - Document the usage of specific Streamlit components in the code
 - Integrate UI configuration parameters from `config.yaml` (À conserver pour plus tard)
