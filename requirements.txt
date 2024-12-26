@@ -13,3 +13,7 @@ pyperclip>=1.8.2,<2.0.0
 
 # Local LLM
 ollama>=0.1.0,<1.0.0
+
+# Tests
+pytest==7.4.3
+pytest-cov==4.1.0
