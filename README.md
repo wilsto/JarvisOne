@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD029 -->
 # JarvisOne
 
 JarvisOne est un assistant conversationnel modulaire et évolutif qui intègre des capacités d'interaction avec des outils externes, notamment pour la recherche de fichiers.
