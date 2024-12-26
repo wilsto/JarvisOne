@@ -1,4 +1,30 @@
-"""Manager for Ollama LLM provider."""
+"""Manager for Ollama LLM provider.
+
+This module handles the configuration and management of locally installed Ollama models.
+It provides functionality to:
+- Detect installed Ollama models using the CLI
+- Update the configuration with available models
+- Manage model metadata (size, context length, etc.)
+
+Example:
+    ```python
+    # Get list of installed models
+    models = get_installed_models()
+    
+    # Update configuration with installed models
+    config = {
+        "Ollama (Local)": {
+            "models": {},
+            "default_model": None
+        }
+    }
+    updated_config = update_ollama_config(config)
+    ```
+
+Note:
+    This module requires Ollama to be installed and accessible via command line.
+    For installation instructions, visit: https://ollama.ai/
+"""
 
 import subprocess
 import json
@@ -8,7 +34,37 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 def get_installed_models() -> List[Dict]:
-    """Get list of installed Ollama models."""
+    """Get list of installed Ollama models.
+    
+    This function executes the 'ollama list' command and parses its output to get
+    information about locally installed models.
+    
+    Returns:
+        List[Dict]: List of dictionaries containing model information:
+            - name (str): Model name with tag (e.g., 'mistral:latest')
+            - size (str): Model size (e.g., '4.1GB')
+            - description (str): Model description
+            - context_length (int): Maximum context length
+            - local (bool): Always True for Ollama models
+            
+    Raises:
+        subprocess.CalledProcessError: If the ollama command fails
+        Exception: For any other unexpected errors
+        
+    Example:
+        ```python
+        models = get_installed_models()
+        # Returns: [
+        #     {
+        #         "name": "mistral:latest",
+        #         "size": "4.1GB",
+        #         "description": "Modèle local Ollama",
+        #         "context_length": 8192,
+        #         "local": True
+        #     }
+        # ]
+        ```
+    """
     try:
         # Run ollama list command
         result = subprocess.run(
@@ -48,7 +104,44 @@ def get_installed_models() -> List[Dict]:
         return []
 
 def update_ollama_config(config: Dict) -> Dict:
-    """Update Ollama configuration with installed models."""
+    """Update Ollama configuration with installed models.
+    
+    This function retrieves the list of installed models and updates the provided
+    configuration dictionary with model information. If models are found, it also
+    sets the first model as the default.
+    
+    Args:
+        config (Dict): Configuration dictionary containing Ollama provider settings.
+            Must have an "Ollama (Local)" key.
+            
+    Returns:
+        Dict: Updated configuration dictionary with installed models information
+        
+    Example:
+        ```python
+        config = {
+            "Ollama (Local)": {
+                "models": {},
+                "default_model": None
+            }
+        }
+        updated_config = update_ollama_config(config)
+        # Returns: {
+        #     "Ollama (Local)": {
+        #         "models": {
+        #             "mistral:latest": {
+        #                 "name": "mistral:latest",
+        #                 "description": "Modèle local Ollama",
+        #                 "context_length": 8192,
+        #                 "local": True,
+        #                 "size": "4.1GB"
+        #             }
+        #         },
+        #         "default_model": "mistral:latest"
+        #     }
+        # }
+        ```
+    """
     models = get_installed_models()
     
     if not models:

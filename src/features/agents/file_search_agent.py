@@ -6,6 +6,8 @@ from pathlib import Path
 import streamlit as st
 import pyperclip
 from typing import List
+from datetime import datetime
+import random
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -101,87 +103,33 @@ def launch_everything_gui(query: str):
         logger.error(f"Failed to launch Everything GUI: {str(e)}")
 
 def format_result(results: List[str], query: str) -> List[str]:
-    """Format and display search results using Streamlit."""
+    """Format and display search results in the Interactions tab.
     
-    # Style CSS pour les résultats
-    st.markdown("""
-        <style>
-        .result-row {
-            display: flex;
-            align-items: center;
-            padding: 4px 0;
-            margin: 2px 0;
-        }
-        .result-number {
-            min-width: 40px;
-            font-weight: bold;
-            color: #555;
-        }
-        .result-content {
-            flex-grow: 1;
-            margin-left: 10px;
-        }
-        .file-name {
-            font-weight: bold;
-            color: #1f1f1f;
-        }
-        .file-path {
-            color: #666;
-            font-size: 0.85em;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    Displays only the first 10 results and shows a count of remaining files.
+    """
     
-    # Conteneur principal avec padding minimal
-    with st.container():
-        # En-tête compact
-        col1, col2 = st.columns([9, 1])
-        with col1:
-            with st.expander("ℹ️ Informations de recherche", expanded=False):
-                st.code(query, language="text")
-        with col2:
-            st.metric("Résultats", len(results), label_visibility="visible")
-        
-        # Affichage des résultats
-        for i, result in enumerate(results, 1):
-            file_path = result.strip()
-            file_name = os.path.basename(file_path)
-            dir_path = os.path.dirname(file_path)
-            
-            # Utilisation de colonnes pour un layout horizontal
-            cols = st.columns([0.4, 5, 0.6])
-            
-            with cols[0]:
-                # Numéro plus grand pour les 10 premiers résultats
-                if i <= 10:
-                    st.markdown(f"<h3 style='margin: 0; color: #555;'>#{i}</h3>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div style='color: #666;'>#{i}</div>", unsafe_allow_html=True)
-            
-            with cols[1]:
-                # Nom de fichier et chemin sur une seule ligne
-                st.markdown(
-                    f"<div style='line-height: 1.2;'>"
-                    f"<span class='file-name'>{file_name}</span><br/>"
-                    f"<span class='file-path'>{dir_path}</span>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-            
-            with cols[2]:
-                if st.button("📋", key=f"copy_{i}", help="Copier le chemin"):
-                    pyperclip.copy(file_path)
-                    st.toast("Chemin copié !", icon="✅")
-        
-        # Bouton Everything en bas
-        st.button("🔍 Ouvrir dans Everything", 
-                 key="open_everything", 
-                 use_container_width=True,
-                 on_click=launch_everything_gui,
-                 args=(query,))
+    # Générer un ID unique pour cette interaction si nécessaire
+    if "interactions" not in st.session_state:
+        st.session_state.interactions = []
     
-    # Return the results for CoreAgent
-    return results
+    interaction_id = f"search_{len(st.session_state.interactions) + 1}"
+    st.session_state.interactions.append({
+        "id": interaction_id,
+        "type": "search",
+        "query": query,
+        "results": results,
+        "timestamp": datetime.now().strftime("%H:%M:%S")
+    })
+    
+    # Construire une réponse conversationnelle
+    nb_results = len(results)
+    if nb_results == 0:
+        response = "Je n'ai trouvé aucun fichier correspondant à votre recherche."
+    else:
+        response = f"J'ai trouvé {nb_results} fichiers qui correspondent à votre recherche. Vous pouvez les consulter dans l'[onglet Interactions](#{interaction_id})."
+    
+    # Return the response message for CoreAgent
+    return response
 
 agent = CoreAgent(
     agent_name="File Search Agent",

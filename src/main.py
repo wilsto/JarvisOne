@@ -1,6 +1,9 @@
 import streamlit as st
 from utils.logging_config import setup_logging, get_logs
 from ui.chat_ui import display_chat, init_chat_session
+import os
+import pyperclip
+from features.agents.file_search_agent import launch_everything_gui
 
 # Configurer le logging en premier
 setup_logging()
@@ -94,10 +97,27 @@ st.markdown("""
 # Initialiser la session si nécessaire
 init_chat_session()
 
+def get_search_title(query: str) -> str:
+    """Génère un titre court et explicite pour la recherche."""
+    # Extraire les mots clés de la requête
+    words = query.lower().split()
+    if "ext:" in query:
+        # Si la recherche contient une extension
+        for word in words:
+            if word.startswith("ext:"):
+                return f"Fichiers {word[4:].upper()}"
+    elif any(word.startswith("dm:") for word in words):
+        # Si la recherche contient une date
+        return "Fichiers récents"
+    else:
+        # Sinon, prendre les 3 premiers mots significatifs
+        significant_words = [w for w in words if len(w) > 2 and not w.startswith(("le", "la", "les", "un", "une", "des"))]
+        return " ".join(significant_words[:3]).title()
+
 def display_logs():
     """Affiche les logs dans un onglet dédié."""
     # Barre de recherche et bouton de filtres sur la même ligne
-    search_col, button_col = st.columns([5, 1])
+    search_col, button_col = st.columns([5,1])
     
     with search_col:
         search_term = st.text_input("🔍 Rechercher dans les logs", "")
@@ -141,13 +161,141 @@ def display_logs():
             unsafe_allow_html=True
         )
 
+def display_interactions():
+    """Affiche les interactions et résultats de recherche."""
+    if "interactions" not in st.session_state:
+        st.session_state.interactions = []
+        
+    if not st.session_state.interactions:
+        st.info("Aucune interaction pour le moment. Les résultats de vos recherches apparaîtront ici.")
+        return
+        
+    # Style CSS pour les résultats
+    st.markdown("""
+        <style>
+        .result-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            margin: 2px 0;
+        }
+        .result-number {
+            min-width: 40px;
+            font-weight: bold;
+            color: #555;
+        }
+        .result-content {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        .file-name {
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #1f1f1f;
+        }
+        .file-path {
+            color: #666;
+            font-size: 0.85em;
+        }
+        .remaining-count {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 10px;
+            background: #f0f2f6;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .interaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .interaction-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .search-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Afficher chaque interaction
+    for interaction in reversed(st.session_state.interactions):
+        search_title = get_search_title(interaction['query'])
+        with st.expander(f"🔍 {search_title} • {interaction['timestamp']}", expanded=True):
+            # En-tête avec le nombre total de résultats et la requête
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(
+                    f"<div class='search-info'>"
+                    f"<b>Requête :</b> <code>{interaction['query']}</code>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+            with col2:
+                st.metric("Total trouvé", len(interaction['results']), label_visibility="visible")
+            
+            # Limiter l'affichage aux 10 premiers résultats
+            display_results = interaction['results'][:10]
+            remaining_count = len(interaction['results']) - 10 if len(interaction['results']) > 10 else 0
+            
+            # Affichage des résultats
+            for i, result in enumerate(display_results, 1):
+                file_path = result.strip()
+                file_name = os.path.basename(file_path)
+                dir_path = os.path.dirname(file_path)
+                
+                # Utilisation de colonnes pour un layout horizontal
+                cols = st.columns([0.4, 5, 0.6])
+                
+                with cols[0]:
+                    st.markdown(f"<div style='margin: 0; color: #555;'>#{i}</div>", unsafe_allow_html=True)
+                
+                with cols[1]:
+                    # Nom de fichier et chemin sur une seule ligne
+                    st.markdown(
+                        f"<div style='line-height: 1.2;'>"
+                        f"<span class='file-name'>{file_name}</span><br/>"
+                        f"<span class='file-path'>{dir_path}</span>"
+                        f"</div>",
+                        unsafe_allow_html=True
+                    )
+                
+                with cols[2]:
+                    if st.button("📋", key=f"copy_{interaction['id']}_{i}", help="Copier le chemin"):
+                        pyperclip.copy(file_path)
+                        st.toast("Chemin copié !", icon="✅")
+            
+            # Afficher le nombre de résultats restants
+            if remaining_count > 0:
+                st.markdown(
+                    f"<div class='remaining-count'>+ {remaining_count} autres fichiers trouvés</div>",
+                    unsafe_allow_html=True
+                )
+            
+            # Bouton Everything en bas
+            st.button("🔍 Ouvrir dans Everything", 
+                     key=f"open_everything_{interaction['id']}", 
+                     use_container_width=True,
+                     on_click=launch_everything_gui,
+                     args=(interaction['query'],))
+
 def display_reasoning():
-    """Affiche le raisonnement de l'agent (à implémenter)."""
-    st.info("Le raisonnement de l'agent sera affiché ici prochainement.")
+    """Fonction obsolète maintenue pour compatibilité."""
+    display_interactions()
 
 if __name__ == "__main__":
     # Créer deux colonnes principales avec ratio 2:1
-    col_main, col_side = st.columns([2, 1])
+    col_main, col_side = st.columns([3, 2])
     
     # Colonne principale pour le chat (2/3)
     with col_main:
@@ -155,15 +303,15 @@ if __name__ == "__main__":
         with chat_tab:
             display_chat()
     
-    # Colonne latérale pour les logs et le raisonnement (1/3)
+    # Colonne latérale pour les logs et les interactions (1/3)
     with col_side:
-        tab_logs, tab_reasoning = st.tabs(["📋 Logs", "🤔 Raisonnement"])
+        tab_interactions, tab_logs = st.tabs(["⚡ Interactions", "📋 Logs"])
+        
+        with tab_interactions:
+            display_interactions()
         
         with tab_logs:
             display_logs()
-        
-        with tab_reasoning:
-            display_reasoning()
             
     # Compter les erreurs en arrière-plan
     logs = get_logs()
