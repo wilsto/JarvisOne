@@ -43,6 +43,41 @@
   * L'architecture doit utiliser l'interface des outils externes si elle existe pour l'affichage des résultats.
   * L'architecture doit éviter au maximum de ré-implémenter des fonctionnalités déjà existantes.
 
+## Repository File Structure
+
+JarvisOne/
+├── main.py                   # Main entry point
+├── config/                   # Configuration files
+│   └── config.yaml          # Main configuration file
+├── data/                    # Data and embeddings
+├── docs/                    # Documentation
+│   └── everything.md        # Everything CLI documentation
+├── log/                     # Log files
+├── src/                     # Main source code
+│   ├── core/               # Core logic
+│   │   ├── providers/     # LLM-specific implementations (À conserver pour plus tard)
+│   │   └── config_manager.py # Configuration manager (À conserver pour plus tard)
+│   ├── features/          # Main features
+│   │   ├── file_search.py    # Module for file searching with `anything`
+│   │   ├── agents/       # LLM agents
+│   │   │   └── file_search_agent.py # Agent for file searching
+│   │   │   └── query_analyzer_agent.py  # Agent for understanding user queries
+│   │   ├── rag_module.py     # RAG module (À conserver pour plus tard)
+│   │   └── document_manager.py # Document manager (À conserver pour plus tard)
+│   ├── types/             # Types and schemas (À conserver pour plus tard)
+│   ├── utils/            # Utilities
+│   │   └── logging_config.py # Logging configuration (À conserver pour plus tard)
+│   └── ui/               # User interface
+│       ├── chat_ui.py      # Chat interface
+│       ├── streamlit_components.py # Streamlit components (À conserver pour plus tard)
+│       └── document_ui.py    # Document management interface (À conserver pour plus tard)
+├── tests/                 # Unit and integration tests
+├── .env                   # Environment variables
+├── .gitignore            # Git ignore file
+├── LICENSE               # License file
+├── README.md             # Project documentation
+├── requirements.txt      # Python dependencies
+└── odc_*.md             # ODC documentation files
 
 ## Architectural Logic
 

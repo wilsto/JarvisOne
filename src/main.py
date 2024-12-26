@@ -2,6 +2,7 @@ import streamlit as st
 from utils.logging_config import setup_logging, get_logs
 from ui.chat_ui import display_chat, init_chat_session
 from ui.interactions import InteractionDisplayFactory
+from ui.styles import get_all_styles
 import os
 import pyperclip
 from features.agents.file_search_agent import launch_everything_gui
@@ -12,88 +13,8 @@ setup_logging()
 # Configuration du style pour utiliser toute la largeur
 st.set_page_config(layout="wide")
 
-# CSS personnalisé pour maximiser la largeur des colonnes
-st.markdown("""
-<style>
-    /* Configuration générale */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 0rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
-    }
-    
-    /* Style des colonnes */
-    [data-testid="column"] {
-        padding: 0 2rem;
-        margin-top: 1rem;
-    }
-    [data-testid="column"]:first-child {
-        padding-left: 0;
-    }
-    [data-testid="column"]:last-child {
-        padding-right: 0;
-    }
-    
-    /* Style des onglets */
-    .stTabs {
-        background-color: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: white;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 2.5rem;
-        white-space: nowrap;
-        font-size: 0.9rem;
-        color: #0f1116;
-        border-radius: 0.3rem;
-        background-color: #f0f2f6;
-        border: none;
-        padding: 0 2rem;
-        min-width: 120px;
-        text-align: center;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #e0e2e6;
-        font-weight: bold;
-    }
-    
-    /* Style des logs */
-    .log-entry {
-        font-family: 'Consolas', monospace;
-        font-size: 0.8rem;
-        line-height: 1.2;
-        padding: 0.2rem 0;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    /* Headers des sections */
-    .section-header {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        color: #0f1116;
-    }
-
-    /* Style du bouton de filtre */
-    .filter-button {
-        float: right;
-        margin-top: -48px;
-        margin-right: 10px;
-    }
-    
-    /* Style de la barre de recherche */
-    .search-container {
-        margin-right: 140px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Charger et appliquer les styles CSS
+st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
 
 # Initialiser la session si nécessaire
 init_chat_session()
@@ -174,72 +95,6 @@ def display_interactions():
     # Inverser l'ordre des interactions pour avoir les plus récentes en haut
     interactions = list(reversed(st.session_state.interactions))
     
-    # Style CSS pour les résultats
-    st.markdown("""
-        <style>
-        .result-row {
-            display: flex;
-            align-items: center;
-            padding: 4px 0;
-            margin: 2px 0;
-        }
-        .result-number {
-            min-width: 40px;
-            font-weight: bold;
-            color: #555;
-        }
-        .result-content {
-            flex-grow: 1;
-            margin-left: 10px;
-        }
-        .file-name {
-            font-weight: bold;
-            font-size: 0.9em;
-            color: #1f1f1f;
-        }
-        .file-path {
-            color: #666;
-            font-size: 0.85em;
-        }
-        .remaining-count {
-            color: #666;
-            font-style: italic;
-            text-align: center;
-            padding: 10px;
-            background: #f0f2f6;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        .interaction-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-        .interaction-time {
-            color: #666;
-            font-size: 0.9em;
-        }
-        .search-info {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        :target {
-            scroll-margin-top: 60px;
-            animation: highlight 2s ease-out;
-        }
-        @keyframes highlight {
-            0% { background-color: #fff3cd; }
-            100% { background-color: transparent; }
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
     # Afficher chaque interaction
     for i, interaction in enumerate(interactions):
         # Récupérer le handler approprié
@@ -248,10 +103,6 @@ def display_interactions():
         # Créer un expander avec le titre généré par le handler
         with st.expander(handler.get_expander_title(interaction), expanded=(i == 0)):
             handler.display(interaction)
-
-def display_reasoning():
-    """Fonction obsolète maintenue pour compatibilité."""
-    display_interactions()
 
 if __name__ == "__main__":
     # Créer deux colonnes principales avec ratio 2:1

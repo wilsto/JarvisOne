@@ -1,0 +1,61 @@
+/* Style des résultats */
+.result-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+    margin: 2px 0;
+}
+.result-number {
+    min-width: 40px;
+    font-weight: bold;
+    color: #555;
+}
+.result-content {
+    flex-grow: 1;
+    margin-left: 10px;
+}
+.file-name {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #1f1f1f;
+}
+.file-path {
+    color: #666;
+    font-size: 0.85em;
+}
+.remaining-count {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
+    background: #f0f2f6;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+.interaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+.interaction-time {
+    color: #666;
+    font-size: 0.9em;
+}
+.search-info {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+:target {
+    scroll-margin-top: 60px;
+    animation: highlight 2s ease-out;
+}
+@keyframes highlight {
+    0% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}

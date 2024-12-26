@@ -1,0 +1,20 @@
+/* Style des logs */
+.log-entry {
+    font-family: 'Consolas', monospace;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Style du bouton de filtre */
+.filter-button {
+    float: right;
+    margin-top: -48px;
+    margin-right: 10px;
+}
+
+/* Style de la barre de recherche */
+.search-container {
+    margin-right: 140px;
+}

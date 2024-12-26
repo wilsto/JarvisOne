@@ -12,9 +12,12 @@ def mock_llm():
     return mock
 
 def test_query_analyzer_initialization():
-    """Test query analyzer agent initialization."""
-    assert agent.agent_name == "Query Analyzer"
-    assert "analyse de requêtes" in agent.system_instructions.lower()
+    """Test l'initialisation de l'agent d'analyse."""
+    from features.agents.query_analyzer_agent import agent
+    
+    assert agent is not None
+    assert agent.agent_name == "Query Analyzer Agent"
+    assert "query analyzer" in agent.system_instructions[0].lower()
     assert len(agent.tools) == 0  # No tools needed for this agent
 
 def test_analyze_query_file_search():

@@ -12,6 +12,11 @@ class MockSessionState(dict):
     3. Storing values in the underlying dictionary
     4. Supporting attribute deletion (del session_state.key)
     """
+    def __init__(self):
+        super().__init__()
+        # Initialize common session state attributes
+        self.interactions = []
+    
     def __setattr__(self, key, value):
         self[key] = value
     

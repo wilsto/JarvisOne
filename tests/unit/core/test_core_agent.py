@@ -132,10 +132,11 @@ def test_core_agent_output_formatter():
     """Test that CoreAgent uses output formatter properly"""
     mock_llm = MockLLM()
     
-    def mock_formatter(content: str, raw_response: str) -> dict:
+    def mock_formatter(content: str, raw_response: str, interaction_id: str = None) -> dict:
         return {
             "formatted": content,
-            "raw": raw_response
+            "raw": raw_response,
+            "interaction_id": interaction_id
         }
     
     agent = CoreAgent(
@@ -150,6 +151,7 @@ def test_core_agent_output_formatter():
     assert "raw" in response
     assert response["formatted"] == "Test response"
     assert response["raw"] == "Test response"
+    assert "interaction_id" in response
 
 def test_core_agent_output_formatter_none_content():
     """Test that CoreAgent handles None content with formatter"""
@@ -158,10 +160,11 @@ def test_core_agent_output_formatter_none_content():
     def failing_tool(response: str) -> None:
         return None
     
-    def mock_formatter(content: str, raw_response: str) -> dict:
+    def mock_formatter(content: str, raw_response: str, interaction_id: str = None) -> dict:
         return {
             "formatted": content,
-            "raw": raw_response
+            "raw": raw_response,
+            "interaction_id": interaction_id
         }
     
     agent = CoreAgent(
