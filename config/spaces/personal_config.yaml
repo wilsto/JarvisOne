@@ -1,0 +1,13 @@
+name: Personnel
+paths:
+  - "C:/Users/Will/OneDrive/Perso"
+metadata:
+  description: "Espace personnel"
+  context: "personnel"
+search_params:
+  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx", ".jpg", ".png"]
+  exclude_patterns: ["*temp*", "*backup*"]
+tags:
+  - personnel
+  - privé
+  - documents

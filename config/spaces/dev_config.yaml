@@ -1,0 +1,13 @@
+name: Développement
+paths:
+  - "C:/Users/Will/OneDrive/Dev"
+metadata:
+  description: "Espace développement"
+  context: "technique"
+search_params:
+  include_extensions: [".py", ".js", ".html", ".css", ".md", ".json", ".yaml", ".yml"]
+  exclude_patterns: ["*node_modules*", "*venv*", "*__pycache__*", "*.git*"]
+tags:
+  - développement
+  - code
+  - technique

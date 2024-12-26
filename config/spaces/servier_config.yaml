@@ -1,0 +1,13 @@
+name: Servier
+paths:
+  - "C:/Users/Will/OneDrive - Servier Monde"
+metadata:
+  description: "Espace de connaissances Servier"
+  context: "professionnel"
+search_params:
+  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx"]
+  exclude_patterns: ["*temp*", "*backup*"]
+tags:
+  - professionnel
+  - servier
+  - pharma

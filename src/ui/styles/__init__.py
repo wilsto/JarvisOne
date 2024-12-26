@@ -11,6 +11,6 @@ def load_css(filename: str) -> str:
 def get_all_styles() -> str:
     """Get all CSS styles combined."""
     styles = []
-    for filename in ["base.css", "logs.css", "interactions.css"]:
+    for filename in ["base.css", "logs.css", "interactions.css", "sidebar.css"]:
         styles.append(load_css(filename))
     return "\n".join(styles)

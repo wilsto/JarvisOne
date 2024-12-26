@@ -27,71 +27,66 @@ except Exception as e:
     logger.error(f"Error reading everything.md from {docs_path}: {str(e)}")
     everything_docs = "Documentation not available"
 
-def clean_llm_response(response: str) -> str:
-    """Clean LLM response to ensure strict format."""
-    # Remove common prefixes and formatting
-    response = response.lower().strip()
-    prefixes_to_remove = [
-        "user query:", "output:", "correct query:",
-        "query:", "formatted query:", "everything query:",
-        "`", "'", '"'
-    ]
+def get_everything_docs():
+    """Get the contents of the Everything documentation."""
+    try:
+        with open(docs_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Error reading everything.md from {docs_path}: {str(e)}")
+        return "Documentation not available"
+
+def query_in_context(query: str) -> str:
+    """Add context paths to the query if available.
     
-    for prefix in prefixes_to_remove:
-        if response.startswith(prefix):
-            response = response[len(prefix):].strip()
-    
-    # Remove any trailing formatting
-    response = response.rstrip('`\'" ')
-    
-    return response
+    Args:
+        query: Base search query
+        
+    Returns:
+        str: Query with context paths added
+    """
+    if 'knowledge_manager' in st.session_state:
+        paths = st.session_state.knowledge_manager.get_space_paths()
+        if paths:
+            # Format paths for Everything search
+            path_query = ' '.join([f'path:"{str(path).replace("/", "\\")}"' for path in paths])
+            return f"{query} {path_query}"
+    return query
 
 def execute_search(query: str) -> List[str]:
     """Execute Everything search with the formatted query."""
-    # Clean the query first
-    query = clean_llm_response(query)
+    # Add context to query
+    query = query_in_context(query)
+    
+    logger.info(f"Executing Everything search with command: {os.path.join('C:\\Program Files\\Everything', 'es.exe')} {query}")
     
     try:
+
         # Path to Everything CLI executable
         es_path = "C:\\Program Files\\Everything\\es.exe"
         
         # Construct and log the command
         command = f'"{es_path}" {query}'
-        logger.info(f"Executing Everything search with command: {command}")
-        
-        # Execute the command
-        process = subprocess.run(
-            command,
-            shell=True,  # Needed for quoted paths
-            capture_output=True,
-            text=True
-        )
 
-        # Check the return code
-        if process.returncode != 0:
-            logger.error(f"Search failed with return code {process.returncode}")
-            logger.error(f"Error output: {process.stderr}")
-            return []
+        # Execute search
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True
+        )
         
-        # Split the output into lines, remove empty lines and duplicates
-        results = list(dict.fromkeys([line.strip() for line in process.stdout.split('\n') if line.strip()]))
+        # Process and deduplicate results
+        results = result.stdout.strip().split('\n')
+        results = [r for r in results if r]  # Remove empty lines
+        results = list(dict.fromkeys(results))  # Remove duplicates
+        
         logger.info(f"Search completed. Found {len(results)} unique results")
         return results
         
-    except Exception as e:
-        logger.error(f"Search execution error: {str(e)}")
-        logger.error("Exception details:", exc_info=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error executing Everything search: {str(e)}")
         return []
-
-def launch_everything_gui(query: str):
-    """Launch Everything GUI with the specified query."""
-    try:
-        everything_path = "C:\\Program Files\\Everything\\Everything.exe"
-        command = f'"{everything_path}" -s "{query}"'
-        subprocess.Popen(command, shell=True)
-        logger.info(f"Launched Everything GUI with query: {query}")
-    except Exception as e:
-        logger.error(f"Failed to launch Everything GUI: {str(e)}")
 
 def handle_search_interaction(transformed_query: str, results: List[str]) -> str:
     """Gère l'affichage des résultats de recherche dans l'interface.
@@ -106,6 +101,8 @@ def handle_search_interaction(transformed_query: str, results: List[str]) -> str
     if "interactions" not in st.session_state:
         st.session_state.interactions = []
     
+    transformed_query = query_in_context(transformed_query)
+
     interaction_id = str(uuid.uuid4())
     st.session_state.interactions.append({
         'id': interaction_id,
@@ -117,22 +114,26 @@ def handle_search_interaction(transformed_query: str, results: List[str]) -> str
     
     return interaction_id
 
-def format_result(results: List[str], transformed_query: str) -> str:
+def format_result(results: List[str], transformed_query: str, interaction_id: str) -> str:
     """Format search results into a response message.
     
     Args:
         results: Liste des résultats de recherche
         transformed_query: La requête transformée par l'agent
+        interaction_id: ID de l'interaction pour le lien
         
     Returns:
         str: Message de réponse formaté
     """
+
+    transformed_query = query_in_context(transformed_query)
     nb_results = len(results)
     if nb_results == 0:
         return "Je n'ai trouvé aucun fichier correspondant à votre recherche."
     else:
-        # L'ID sera fourni par CoreAgent via handle_search_interaction
-        return lambda interaction_id: f"J'ai trouvé {nb_results} fichiers qui correspondent à votre recherche (`{transformed_query}`). Vous pouvez les consulter dans l'[onglet Interactions](#{interaction_id})."
+        return f"J'ai trouvé {nb_results} fichiers qui correspondent à votre recherche (`{transformed_query}`). Vous pouvez les consulter dans l'[onglet Interactions](#{interaction_id})"
+
+everything_docs = get_everything_docs()
 
 agent = CoreAgent(
     agent_name="File Search Agent",
@@ -165,7 +166,7 @@ agent = CoreAgent(
         "REMEMBER: RETURN ONLY THE RAW QUERY STRING."
     ],
     tools=[execute_search],
-    output_formatter=lambda results, transformed_query, interaction_id: format_result(results, transformed_query)(interaction_id),
+    output_formatter=lambda results, transformed_query, interaction_id: format_result(results, transformed_query, interaction_id),
     interactions=handle_search_interaction
 )
 

@@ -1,0 +1,13 @@
+name: Coaching
+paths:
+  - "G:/Mon Drive/CoachbyWill"
+metadata:
+  description: "Espace coaching"
+  context: "professionnel"
+search_params:
+  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx", ".pptx"]
+  exclude_patterns: ["*temp*", "*backup*", "*archive*"]
+tags:
+  - coaching
+  - formation
+  - professionnel

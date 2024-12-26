@@ -3,9 +3,11 @@ from utils.logging_config import setup_logging, get_logs
 from ui.chat_ui import display_chat, init_chat_session
 from ui.interactions import InteractionDisplayFactory
 from ui.styles import get_all_styles
-import os
-import pyperclip
-from features.agents.file_search_agent import launch_everything_gui
+from core.knowledge_space import KnowledgeSpaceManager, SpaceType
+from pathlib import Path
+from core.core_agent import CoreAgent
+import yaml
+from datetime import datetime
 
 # Configurer le logging en premier
 setup_logging()
@@ -19,6 +21,42 @@ st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
 # Initialiser la session si nécessaire
 init_chat_session()
 
+def load_app_state() -> dict:
+    """Charge l'état de l'application depuis le fichier de configuration."""
+    config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
+    default_state = {
+        "knowledge_space": "AGNOSTIC",
+        "cache_enabled": True
+    }
+    if config_file.exists():
+        with open(config_file, 'r', encoding='utf-8') as f:
+            loaded_state = yaml.safe_load(f)
+            return {**default_state, **loaded_state}  # Merge with defaults
+    return default_state
+
+def save_app_state(space_type: SpaceType):
+    """Sauvegarde l'état de l'application."""
+    config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
+    current_state = load_app_state()  # Load existing state
+    current_state["knowledge_space"] = space_type.name
+    with open(config_file, 'w', encoding='utf-8') as f:
+        yaml.dump(current_state, f)
+
+def initialize_session_state():
+    if 'knowledge_space' not in st.session_state:
+        # Charger le dernier espace utilisé
+        app_state = load_app_state()
+        st.session_state.knowledge_space = SpaceType[app_state["knowledge_space"]]
+        st.session_state.cache_enabled = app_state["cache_enabled"]
+    
+    if 'knowledge_manager' not in st.session_state:
+        config_dir = Path(__file__).parent.parent / "config"
+        st.session_state.knowledge_manager = KnowledgeSpaceManager(config_dir)
+        st.session_state.knowledge_manager.set_current_space(st.session_state.knowledge_space)
+    else:
+        # Synchroniser l'espace actuel avec le knowledge manager
+        st.session_state.knowledge_manager.set_current_space(st.session_state.knowledge_space)
+    
 def get_search_title(query: str) -> str:
     """Génère un titre court et explicite pour la recherche."""
     # Extraire les mots clés de la requête
@@ -104,7 +142,94 @@ def display_interactions():
         with st.expander(handler.get_expander_title(interaction), expanded=(i == 0)):
             handler.display(interaction)
 
+def create_agent(agent_type: str) -> CoreAgent:
+    """Create and initialize an agent with the current knowledge space."""
+    agent = CoreAgent(
+        agent_name=agent_type,
+        system_instructions=f"You are a {agent_type} agent.",  # Instructions simples pour le moment
+        knowledge_manager=st.session_state.knowledge_manager
+    )
+    return agent
+
+def sidebar():
+    """Render the sidebar."""
+    with st.sidebar:
+        st.title("JarvisOne")
+        
+        # Knowledge Space Selection
+        space_options = [
+            ("Agnostic", SpaceType.AGNOSTIC),
+            ("Servier", SpaceType.SERVIER),
+            ("Personnel", SpaceType.PERSONAL),
+            ("Coaching", SpaceType.COACHING),
+            ("Développement", SpaceType.DEV)
+        ]
+        
+        current_index = next(
+            (i for i, (_, space_type) in enumerate(space_options) 
+             if space_type == st.session_state.knowledge_space), 
+            0
+        )
+        
+        selected_space = st.selectbox(
+            "Espace de connaissances",
+            options=[name for name, _ in space_options],
+            index=current_index,
+            key="knowledge_space_select"
+        )
+        
+        # Cache Control
+        cache_enabled = st.toggle(
+            "Activer le cache",
+            value=st.session_state.cache_enabled,
+            help="Active ou désactive le cache des requêtes",
+            key="cache_toggle"
+        )
+        
+        # Update cache state if changed
+        if cache_enabled != st.session_state.cache_enabled:
+            old_value = st.session_state.cache_enabled
+            st.session_state.cache_enabled = cache_enabled
+            current_state = load_app_state()
+            current_state["cache_enabled"] = cache_enabled
+            config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
+            with open(config_file, 'w', encoding='utf-8') as f:
+                yaml.dump(current_state, f)
+            
+            # Log the configuration change
+            if 'interactions' not in st.session_state:
+                st.session_state.interactions = []
+            st.session_state.interactions.append({
+                'type': 'config_change',
+                'config_type': 'Cache',
+                'old_value': str(old_value),
+                'new_value': str(cache_enabled),
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+            st.rerun()
+        
+        # Update knowledge space if changed
+        selected_space_type = next(space_type for name, space_type in space_options if name == selected_space)
+        if selected_space_type != st.session_state.knowledge_space:
+            old_space = st.session_state.knowledge_space
+            st.session_state.knowledge_space = selected_space_type
+            save_app_state(selected_space_type)
+            
+            # Log the configuration change
+            if 'interactions' not in st.session_state:
+                st.session_state.interactions = []
+            st.session_state.interactions.append({
+                'type': 'config_change',
+                'config_type': 'Espace de connaissances',
+                'old_value': old_space.name,
+                'new_value': selected_space_type.name,
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+            st.rerun()
+
 if __name__ == "__main__":
+    initialize_session_state()
+    
     # Créer deux colonnes principales avec ratio 2:1
     col_main, col_side = st.columns([3, 2])
     
@@ -116,13 +241,21 @@ if __name__ == "__main__":
     
     # Colonne latérale pour les logs et les interactions (1/3)
     with col_side:
-        tab_interactions, tab_logs = st.tabs(["⚡ Interactions", "📋 Logs"])
+        tab_interactions, tab_logs, tab_params = st.tabs([
+            "⚡ Interactions", 
+            "📋 Logs",
+            "⚙️ Paramètres"
+        ])
         
         with tab_interactions:
             display_interactions()
         
         with tab_logs:
             display_logs()
+            
+        with tab_params:
+            from ui.parameters import display_parameters
+            display_parameters()
             
     # Compter les erreurs en arrière-plan
     logs = get_logs()

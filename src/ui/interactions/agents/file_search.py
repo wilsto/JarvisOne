@@ -2,8 +2,13 @@
 import streamlit as st
 import os
 import pyperclip
+import logging
 from typing import Dict, Any
 from ..base import BaseInteractionDisplay
+
+# Configuration du logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class FileSearchDisplay(BaseInteractionDisplay):
     """Display handler for file search interactions."""
@@ -73,5 +78,8 @@ class FileSearchDisplay(BaseInteractionDisplay):
     def _launch_everything_gui(self, query: str) -> None:
         """Launch Everything GUI with the given query."""
         import subprocess
+        logger.info("Launching Everything GUI with query: %s", query)
+        query4everything = query.replace('path:"','')
+        logger.info("Query for Everything: %s", query4everything)
         everything_path = r"C:\Program Files\Everything\Everything.exe"
-        subprocess.Popen([everything_path, "-search", query])
+        subprocess.Popen([everything_path, "-search", query4everything])
