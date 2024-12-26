@@ -3,6 +3,7 @@
 from .llm_base import LLM
 from .llm_manager import get_llm_model
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Implémentation du LLM utilisant le gestionnaire de modèles
@@ -11,6 +12,7 @@ class ManagedLLM(LLM):
         self.model = get_llm_model()
     
     def generate_response(self, prompt: str) -> str:
+        """Génère une réponse en utilisant le modèle LLM configuré."""
         try:
             response = self.model.generate_response(prompt)
             return response
@@ -20,6 +22,7 @@ class ManagedLLM(LLM):
 class CoreAgent:
     def __init__(self, agent_name: str, system_instructions: str, 
                  tools: list = None, output_formatter: callable = None,
+                 interactions: callable = None,
                  llm: LLM = None):
         """
         Initialise un CoreAgent.
@@ -29,12 +32,14 @@ class CoreAgent:
             system_instructions: Les instructions système pour l'agent.
             tools: Liste optionnelle de fonctions externes.
             output_formatter: Fonction optionnelle pour formater la sortie.
+            interactions: Fonction optionnelle pour gérer les interactions UI.
             llm : instance du LLM utilisé par l'agent
         """
         self.agent_name = agent_name
         self.system_instructions = system_instructions
         self.tools = tools if tools else []
         self.output_formatter = output_formatter
+        self.interactions = interactions
         self.llm = llm if llm else ManagedLLM()
 
     def _build_prompt(self, user_query: str) -> str:
@@ -42,6 +47,21 @@ class CoreAgent:
         Construit le prompt pour le LLM.
         """
         return f"{self.system_instructions}\n\nUser Query: {user_query}"
+
+    def _handle_interaction(self, query: str, results: any) -> str:
+        """
+        Gère l'ajout d'une interaction si un gestionnaire est défini.
+        
+        Args:
+            query: La requête utilisateur
+            results: Les résultats à afficher
+            
+        Returns:
+            str: L'ID de l'interaction créée, ou None si pas de gestionnaire
+        """
+        if self.interactions:
+            return self.interactions(query, results)
+        return None
 
     def run(self, user_query: str) -> dict:
         """
@@ -71,10 +91,13 @@ class CoreAgent:
                     logger.error(f"Error while executing tool {tool.__name__} : {e}")
                     content = []
 
+        # Gérer l'interaction UI si définie - utiliser la requête transformée
+        interaction_id = self._handle_interaction(llm_response, content)
+
         # Si on a un formateur de sortie, on l'utilise
         if self.output_formatter:
             if content is not None:
-                content = self.output_formatter(content, llm_response)
+                content = self.output_formatter(content, llm_response, interaction_id)
             else:
                 content = {"error": "No tool output available"}
         # Sinon, on retourne un dict avec la réponse du LLM
@@ -82,7 +105,8 @@ class CoreAgent:
             content = {
                 "content": content,
                 "metadata": {
-                    "raw_response": llm_response
+                    "raw_response": llm_response,
+                    "interaction_id": interaction_id
                 }
             }
 

@@ -1,6 +1,7 @@
 import streamlit as st
 from utils.logging_config import setup_logging, get_logs
 from ui.chat_ui import display_chat, init_chat_session
+from ui.interactions import InteractionDisplayFactory
 import os
 import pyperclip
 from features.agents.file_search_agent import launch_everything_gui
@@ -169,7 +170,10 @@ def display_interactions():
     if not st.session_state.interactions:
         st.info("Aucune interaction pour le moment. Les résultats de vos recherches apparaîtront ici.")
         return
-        
+    
+    # Inverser l'ordre des interactions pour avoir les plus récentes en haut
+    interactions = list(reversed(st.session_state.interactions))
+    
     # Style CSS pour les résultats
     st.markdown("""
         <style>
@@ -225,69 +229,25 @@ def display_interactions():
             border-radius: 4px;
             margin: 10px 0;
         }
+        :target {
+            scroll-margin-top: 60px;
+            animation: highlight 2s ease-out;
+        }
+        @keyframes highlight {
+            0% { background-color: #fff3cd; }
+            100% { background-color: transparent; }
+        }
         </style>
     """, unsafe_allow_html=True)
-
+    
     # Afficher chaque interaction
-    for interaction in reversed(st.session_state.interactions):
-        search_title = get_search_title(interaction['query'])
-        with st.expander(f"🔍 {search_title} • {interaction['timestamp']}", expanded=True):
-            # En-tête avec le nombre total de résultats et la requête
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.markdown(
-                    f"<div class='search-info'>"
-                    f"<b>Requête :</b> <code>{interaction['query']}</code>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-            with col2:
-                st.metric("Total trouvé", len(interaction['results']), label_visibility="visible")
-            
-            # Limiter l'affichage aux 10 premiers résultats
-            display_results = interaction['results'][:10]
-            remaining_count = len(interaction['results']) - 10 if len(interaction['results']) > 10 else 0
-            
-            # Affichage des résultats
-            for i, result in enumerate(display_results, 1):
-                file_path = result.strip()
-                file_name = os.path.basename(file_path)
-                dir_path = os.path.dirname(file_path)
-                
-                # Utilisation de colonnes pour un layout horizontal
-                cols = st.columns([0.4, 5, 0.6])
-                
-                with cols[0]:
-                    st.markdown(f"<div style='margin: 0; color: #555;'>#{i}</div>", unsafe_allow_html=True)
-                
-                with cols[1]:
-                    # Nom de fichier et chemin sur une seule ligne
-                    st.markdown(
-                        f"<div style='line-height: 1.2;'>"
-                        f"<span class='file-name'>{file_name}</span><br/>"
-                        f"<span class='file-path'>{dir_path}</span>"
-                        f"</div>",
-                        unsafe_allow_html=True
-                    )
-                
-                with cols[2]:
-                    if st.button("📋", key=f"copy_{interaction['id']}_{i}", help="Copier le chemin"):
-                        pyperclip.copy(file_path)
-                        st.toast("Chemin copié !", icon="✅")
-            
-            # Afficher le nombre de résultats restants
-            if remaining_count > 0:
-                st.markdown(
-                    f"<div class='remaining-count'>+ {remaining_count} autres fichiers trouvés</div>",
-                    unsafe_allow_html=True
-                )
-            
-            # Bouton Everything en bas
-            st.button("🔍 Ouvrir dans Everything", 
-                     key=f"open_everything_{interaction['id']}", 
-                     use_container_width=True,
-                     on_click=launch_everything_gui,
-                     args=(interaction['query'],))
+    for i, interaction in enumerate(interactions):
+        # Récupérer le handler approprié
+        handler = InteractionDisplayFactory.get_display_handler(interaction['type'])
+        
+        # Créer un expander avec le titre généré par le handler
+        with st.expander(handler.get_expander_title(interaction), expanded=(i == 0)):
+            handler.display(interaction)
 
 def display_reasoning():
     """Fonction obsolète maintenue pour compatibilité."""
