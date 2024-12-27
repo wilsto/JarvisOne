@@ -17,7 +17,11 @@ from datetime import datetime
 setup_logging()
 
 # Configuration du style pour utiliser toute la largeur
-st.set_page_config(layout="wide")
+st.set_page_config( 
+    page_title="JarvisOne",
+    page_icon="💬",
+    layout="wide"
+)
 
 # Charger et appliquer les styles CSS
 st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
