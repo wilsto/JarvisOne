@@ -19,10 +19,10 @@ JarvisOne is a modular and scalable conversational AI assistant.
 - Streamlit 1.31+
 - Gemini 2.0 / ChatGPT-4 / Ollama 
 - Pytest + Streamlit Testing
+- PyYAML  
 - LangChain (À conserver pour plus tard)
 - FAISS (À conserver pour plus tard)
 - SentenceTransformers (À conserver pour plus tard)
-- PyYAML (À conserver pour plus tard)
 - GTTS / SpeechRecognition (À conserver pour plus tard)
 
 ## Tools Used
