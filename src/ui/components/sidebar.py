@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import yaml
 from core.knowledge_space import SpaceType
+from .conversation_history import render_conversation_history
 
 logger = logging.getLogger(__name__)
 
@@ -49,22 +50,35 @@ def render_sidebar():
             
             # Update app state
             config_file = Path(__file__).parent.parent.parent.parent / "config" / "app_state.yaml"
-            with open(config_file, 'r', encoding='utf-8') as f:
-                current_state = yaml.safe_load(f)
+            current_state = {}
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    current_state = yaml.safe_load(f)
             
             current_state["knowledge_space"] = selected_space_type.name
             
             with open(config_file, 'w', encoding='utf-8') as f:
                 yaml.dump(current_state, f)
             
-            # Log the configuration change
-            if 'interactions' not in st.session_state:
-                st.session_state.interactions = []
-            st.session_state.interactions.append({
-                'type': 'config_change',
-                'config_type': 'Espace de connaissances',
-                'old_value': old_space.name,
-                'new_value': selected_space_type.name,
-                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
+            logger.info(f"Switched knowledge space from {old_space} to {selected_space_type}")
+            
+            # Rerun to update UI
             st.rerun()
+
+        # Render conversation history if chat processor is available
+        if "chat_processor" in st.session_state:
+            chat_processor = st.session_state.chat_processor
+            conversations = chat_processor.get_recent_conversations()
+            
+            def on_conversation_selected(conversation_id):
+                if conversation_id is None:
+                    chat_processor.new_conversation()
+                else:
+                    chat_processor.load_conversation(conversation_id)
+                st.rerun()
+            
+            render_conversation_history(
+                conversations=conversations,
+                on_conversation_selected=on_conversation_selected,
+                current_conversation_id=st.session_state.get("current_conversation_id")
+            )

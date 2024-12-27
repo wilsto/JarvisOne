@@ -14,6 +14,9 @@ pyperclip>=1.8.2,<2.0.0
 # Gestion de configuration
 pyyaml>=6.0.1,<7.0.0
 
+# Base de données
+sqlalchemy>=2.0.0,<3.0.0
+
 # Local LLM
 ollama>=0.1.0,<1.0.0
 

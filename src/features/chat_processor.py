@@ -1,10 +1,13 @@
 """Process and route user chat inputs to appropriate agents."""
 
 import logging
-from typing import Any
+from typing import Any, Optional
+from pathlib import Path
 import streamlit as st
 
 from .agents.agent_orchestrator import AgentOrchestrator
+from core.database.repository import ConversationRepository
+from core.analysis.conversation_analyzer import ConversationAnalyzer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -19,9 +22,16 @@ class ChatProcessor:
             self.orchestrator = AgentOrchestrator()
             # Conservative default: 50 messages ≈ 25k tokens (assuming ~500 tokens per message)
             self.max_history_messages = 50
-            logger.info("AgentOrchestrator initialized successfully")
+            
+            # Initialize database
+            db_path = Path(__file__).parent.parent.parent / "data" / "conversations.db"
+            db_path.parent.mkdir(exist_ok=True)
+            self.repository = ConversationRepository(str(db_path))
+            self.analyzer = ConversationAnalyzer()
+            
+            logger.info("ChatProcessor initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize AgentOrchestrator: {str(e)}", exc_info=True)
+            logger.error(f"Failed to initialize ChatProcessor: {str(e)}", exc_info=True)
             raise
         self._initialize_session_state()
     
@@ -29,8 +39,10 @@ class ChatProcessor:
         """Initialize session state for chat history."""
         if "messages" not in st.session_state:
             st.session_state.messages = []
-            logger.info("Created new messages list in session state")
-    
+        if "current_conversation_id" not in st.session_state:
+            st.session_state.current_conversation_id = None
+        logger.info("Session initialized")
+            
     def _format_response(self, response: Any) -> str:
         """Format the response for display in chat.
         
@@ -100,35 +112,108 @@ class ChatProcessor:
 
     def process_user_input(self, user_input: str) -> str:
         """Process user input through the orchestrator and return formatted response."""
-        logger.info(f"Processing user input: {user_input}")
-        
         try:
-            # Add conversation history to context
-            context = self._format_conversation_history()
+            # Create conversation if this is the first interaction
+            if st.session_state.current_conversation_id is None:
+                conversation = self.repository.create_conversation()
+                st.session_state.current_conversation_id = conversation.id
+                logger.info(f"Created new conversation {conversation.id} on first interaction")
             
-            # Create system context to help LLM understand the conversation format
-            system_context = (
-                "You are JarvisOne, an AI assistant. Below is the conversation history "
-                "followed by the current user input. Use this context to provide a relevant "
-                "and contextually appropriate response."
-            )
+            # Get conversation history
+            history = self._format_conversation_history()
             
-            # Combine all context elements
-            enriched_input = (
-                f"{system_context}\n\n"
-                f"{context}\n"
-                f"[CURRENT USER INPUT]\n{user_input}\n"
-            )
+            # Process through orchestrator
+            response = self.orchestrator.process_query(user_input)
             
-            # Get response from orchestrator
-            response = self.orchestrator.process_query(enriched_input)
-            
-            # Format the response for display
-            formatted_response = self._format_response(response)
-            logger.info("Successfully processed and formatted response")
-            
-            return formatted_response
+            return self._format_response(response)
             
         except Exception as e:
-            logger.error(f"Error in chat processor: {str(e)}", exc_info=True)
-            return "Je suis désolé, j'ai rencontré une erreur en traitant votre demande."
+            error_msg = f"Error processing input: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return f"❌ {error_msg}"
+
+    def load_conversation(self, conversation_id: str):
+        """Load a specific conversation from the database."""
+        conversation = self.repository.get_conversation(conversation_id)
+        if conversation:
+            st.session_state.messages = [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in conversation["messages"]
+            ]
+            st.session_state.current_conversation_id = conversation_id
+            logger.info(f"Loaded conversation {conversation_id}")
+        else:
+            logger.warning(f"Conversation {conversation_id} not found")
+
+    def new_conversation(self):
+        """Start a new conversation."""
+        st.session_state.messages = []
+        conversation = self.repository.create_conversation()
+        st.session_state.current_conversation_id = conversation.id
+        logger.info(f"Created new conversation {conversation.id}")
+
+    def get_recent_conversations(self, limit: int = 10):
+        """Get recent conversations for display in sidebar."""
+        return self.repository.get_recent_conversations(limit)
+
+    def _update_conversation_metadata(self):
+        """Update conversation metadata based on current messages."""
+        if not st.session_state.messages:
+            return
+
+        messages = [
+            {
+                "role": msg["role"],
+                "content": msg["content"]
+            }
+            for msg in st.session_state.messages
+        ]
+
+        # Extract metadata
+        title = self.analyzer.extract_title(messages)
+        topics = self.analyzer.extract_topics(messages)
+        summary = self.analyzer.generate_summary(messages)
+
+        # Update in database
+        self.repository.update_conversation_metadata(
+            st.session_state.current_conversation_id,
+            title=title,
+            summary=summary,
+            topics=topics
+        )
+
+    def add_message(self, role: str, content: str):
+        """Add a message to the current conversation."""
+        # Initialize messages list if needed
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+            
+        # Add to session state
+        st.session_state.messages.append({"role": role, "content": content})
+        
+        # Persist to database
+        self.repository.add_message(
+            st.session_state.current_conversation_id,
+            role=role,
+            content=content
+        )
+        
+        # Update metadata periodically (every 5 messages)
+        if len(st.session_state.messages) % 5 == 0:
+            self._update_conversation_metadata()
+
+    def get_messages(self):
+        """Get all messages in the current conversation."""
+        return st.session_state.messages
+
+    def delete_conversation(self, conversation_id: str):
+        """Delete a conversation from the database."""
+        try:
+            self.repository.delete_conversation(conversation_id)
+            if st.session_state.current_conversation_id == conversation_id:
+                st.session_state.current_conversation_id = None
+                st.session_state.messages = []
+            logger.info(f"Deleted conversation {conversation_id}")
+        except Exception as e:
+            logger.error(f"Error deleting conversation: {str(e)}", exc_info=True)
+            raise

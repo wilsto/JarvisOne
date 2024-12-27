@@ -235,9 +235,15 @@ if __name__ == "__main__":
     
     # Colonne principale pour le chat (2/3)
     with col_main:
-        chat_tab = st.tabs(["💬 Chat"])[0]
+        chat_tab, library_tab, apps_tab = st.tabs(["💬 Chat", "📚 Library", "🔧 Apps"])
         with chat_tab:
             display_chat()
+        with library_tab:
+            st.markdown("### Library")
+            st.info("Library features coming soon!")
+        with apps_tab:
+            st.markdown("### Apps")
+            st.info("Apps integration coming soon!")
     
     # Colonne latérale pour les logs et les interactions (1/3)
     with col_side:

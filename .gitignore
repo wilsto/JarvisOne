@@ -45,3 +45,5 @@ log/
 # OS specific
 .DS_Store
 Thumbs.db
+data/conversations.db
+docs/~$features.pptx
