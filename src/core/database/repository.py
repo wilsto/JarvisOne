@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from .models import Base, Conversation, Message, ConversationTopic
+from core.knowledge_space import SpaceType
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +31,19 @@ class ConversationRepository:
         """Create a new database session."""
         return self.SessionLocal()
 
-    def create_conversation(self, title: Optional[str] = None) -> Conversation:
+    def create_conversation(self, title: Optional[str] = None, workspace: SpaceType = SpaceType.AGNOSTIC) -> Conversation:
         """Create a new conversation.
         
         Args:
             title: Optional title for the conversation
+            workspace: Workspace type for the conversation (default: AGNOSTIC)
             
         Returns:
             Created conversation instance
         """
         db = self._get_db()
         try:
-            conversation = Conversation(title=title)
+            conversation = Conversation(title=title, workspace=workspace)
             db.add(conversation)
             db.commit()
             db.refresh(conversation)
@@ -128,35 +130,49 @@ class ConversationRepository:
         finally:
             db.close()
 
-    def get_recent_conversations(self, limit: int = 10) -> List[Dict]:
-        """Get recent conversations ordered by last activity.
+    def get_recent_conversations(self, limit: int = 10, workspace: Optional[SpaceType] = None) -> List[Dict]:
+        """Get recent conversations with their latest messages.
         
         Args:
             limit: Maximum number of conversations to return
+            workspace: Optional workspace filter
             
         Returns:
-            List of conversation summaries
+            List of conversations with their messages
         """
         db = self._get_db()
         try:
+            query = db.query(Conversation)
+            
+            if workspace is not None:
+                query = query.filter(Conversation.workspace == workspace)
+                
             conversations = (
-                db.query(Conversation)
-                .order_by(Conversation.last_timestamp.desc())
+                query.order_by(Conversation.last_timestamp.desc())
                 .limit(limit)
                 .all()
             )
             
             return [
                 {
-                    'id': conv.id,
-                    'title': conv.title,
-                    'start_timestamp': conv.start_timestamp,
-                    'last_timestamp': conv.last_timestamp,
-                    'summary': conv.summary,
-                    'topic_count': len(conv.topics)
+                    "id": conv.id,
+                    "title": conv.title,
+                    "last_timestamp": conv.last_timestamp,
+                    "messages": [
+                        {
+                            "role": msg.role,
+                            "content": msg.content,
+                            "timestamp": msg.timestamp
+                        }
+                        for msg in conv.messages
+                    ],
+                    "workspace": conv.workspace
                 }
                 for conv in conversations
             ]
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting recent conversations: {e}")
+            raise
         finally:
             db.close()
 

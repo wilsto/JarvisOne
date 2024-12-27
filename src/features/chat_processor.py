@@ -160,16 +160,18 @@ class ChatProcessor:
         else:
             logger.warning(f"Conversation {conversation_id} not found")
 
-    def new_conversation(self):
+    def new_conversation(self, workspace=None):
         """Start a new conversation."""
         st.session_state.messages = []
-        conversation = self.repository.create_conversation()
+        if workspace is None:
+            workspace = st.session_state.knowledge_space
+        conversation = self.repository.create_conversation(workspace=workspace)
         st.session_state.current_conversation_id = conversation.id
-        logger.info(f"Created new conversation {conversation.id}")
+        logger.info(f"Created new conversation {conversation.id} in workspace {workspace}")
 
-    def get_recent_conversations(self, limit: int = 10):
+    def get_recent_conversations(self, workspace=None, limit: int = 10):
         """Get recent conversations for display in sidebar."""
-        return self.repository.get_recent_conversations(limit)
+        return self.repository.get_recent_conversations(limit=limit, workspace=workspace)
 
     def _update_conversation_metadata(self):
         """Update conversation metadata based on current messages."""

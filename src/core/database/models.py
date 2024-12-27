@@ -2,9 +2,10 @@
 
 from datetime import datetime
 import uuid
-from sqlalchemy import Column, String, DateTime, Float, ForeignKey, create_engine
+from sqlalchemy import Column, String, DateTime, Float, ForeignKey, create_engine, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from core.knowledge_space import SpaceType
 
 Base = declarative_base()
 
@@ -17,6 +18,7 @@ class Conversation(Base):
     start_timestamp = Column(DateTime, default=datetime.utcnow)
     last_timestamp = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     summary = Column(String, nullable=True)
+    workspace = Column(Enum(SpaceType), default=SpaceType.AGNOSTIC, nullable=False)
 
     # Relationships
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")

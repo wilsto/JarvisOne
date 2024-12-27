@@ -48,6 +48,10 @@ def render_sidebar():
             # Update knowledge manager
             st.session_state.knowledge_manager.set_current_space(selected_space_type)
             
+            # Create new conversation in new workspace if chat processor exists
+            if "chat_processor" in st.session_state:
+                st.session_state.chat_processor.new_conversation(workspace=selected_space_type)
+            
             # Update app state
             config_file = Path(__file__).parent.parent.parent.parent / "config" / "app_state.yaml"
             current_state = {}
@@ -68,11 +72,13 @@ def render_sidebar():
         # Render conversation history if chat processor is available
         if "chat_processor" in st.session_state:
             chat_processor = st.session_state.chat_processor
-            conversations = chat_processor.get_recent_conversations()
+            current_space = st.session_state.knowledge_space
+            conversations = chat_processor.get_recent_conversations(workspace=current_space)
             
             def on_conversation_selected(conversation_id):
                 if conversation_id is None:
-                    chat_processor.new_conversation()
+                    # Create new conversation in current workspace
+                    chat_processor.new_conversation(workspace=current_space)
                 else:
                     chat_processor.load_conversation(conversation_id)
                 st.rerun()
