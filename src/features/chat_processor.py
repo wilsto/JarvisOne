@@ -110,6 +110,21 @@ class ChatProcessor:
         self.max_history_messages = limit
         logger.info(f"Updated conversation history limit to {limit} messages")
 
+    def _combine_history_with_input(self, user_input: str) -> str:
+        """Combine conversation history with new user input.
+        
+        Args:
+            user_input: New user input to process
+        
+        Returns:
+            str: Combined history and input ready for processing
+        """
+        history = self._format_conversation_history()
+        if not history:
+            return user_input
+            
+        return f"{history}\n[USER]\n{user_input}"
+
     def process_user_input(self, user_input: str) -> str:
         """Process user input through the orchestrator and return formatted response."""
         try:
@@ -119,11 +134,11 @@ class ChatProcessor:
                 st.session_state.current_conversation_id = conversation.id
                 logger.info(f"Created new conversation {conversation.id} on first interaction")
             
-            # Get conversation history
-            history = self._format_conversation_history()
+            # Combine history with input
+            combined_input = self._combine_history_with_input(user_input)
             
             # Process through orchestrator
-            response = self.orchestrator.process_query(user_input)
+            response = self.orchestrator.process_query(combined_input)
             
             return self._format_response(response)
             
