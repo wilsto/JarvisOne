@@ -126,12 +126,14 @@ def display_parameters():
     
     # Show model information
     model_info = get_model_info(selected_provider, selected_model)
-    st.subheader("Information Modèle")
-    st.markdown(f"**Nom:** {model_info['name']}")
+    st.subheader("Model information")
+    st.markdown(f"**Name:** {model_info['name']}")
     st.markdown(f"**Description:** {model_info['description']}")
-    st.markdown(f"**Contexte:** {model_info['context_length']} tokens")
+    st.markdown(f"**Context length:** {model_info['context_length']} tokens")
+
+    #TODO: ajout les informations d'usage du model
     if "size" in model_info:
-        st.markdown(f"**Taille:** {model_info['size']}")
+        st.markdown(f"**Size:** {model_info['size']}")
     
     # API Configuration
     if needs_api_key(selected_provider):

@@ -17,6 +17,8 @@ class ChatProcessor:
         """Initialize the chat processor with the orchestrator."""
         try:
             self.orchestrator = AgentOrchestrator()
+            # Conservative default: 50 messages ≈ 25k tokens (assuming ~500 tokens per message)
+            self.max_history_messages = 50
             logger.info("AgentOrchestrator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize AgentOrchestrator: {str(e)}", exc_info=True)
@@ -60,15 +62,68 @@ class ChatProcessor:
         # Handle string or other cases
         return str(response)
     
+    def _format_conversation_history(self) -> str:
+        """Format conversation history for context."""
+        if not st.session_state.messages:
+            return ""
+        
+        # Use configurable number of recent messages
+        recent_messages = st.session_state.messages[-self.max_history_messages:]
+        
+        # Format messages with clear separation and metadata
+        formatted_messages = []
+        for msg in recent_messages:
+            role = msg["role"].upper()
+            content = msg["content"].strip()
+            formatted_messages.append(f"[{role}]\n{content}\n")
+        
+        formatted_history = "\n".join(formatted_messages)
+        
+        return (
+            "\n=== Conversation History ===\n"
+            f"{formatted_history}\n"
+            "=== End of History ===\n"
+        )
+
+    def set_history_limit(self, limit: int) -> None:
+        """Set the maximum number of messages to include in conversation history.
+        
+        Args:
+            limit (int): Maximum number of messages to keep in history
+        """
+        if limit < 1:
+            logger.warning(f"Invalid history limit: {limit}. Using default.")
+            return
+            
+        self.max_history_messages = limit
+        logger.info(f"Updated conversation history limit to {limit} messages")
+
     def process_user_input(self, user_input: str) -> str:
         """Process user input through the orchestrator and return formatted response."""
         logger.info(f"Processing user input: {user_input}")
         
         try:
-            # Obtenir la réponse de l'orchestrateur
-            response = self.orchestrator.process_query(user_input)
+            # Add conversation history to context
+            context = self._format_conversation_history()
             
-            # Formater la réponse pour l'affichage
+            # Create system context to help LLM understand the conversation format
+            system_context = (
+                "You are JarvisOne, an AI assistant. Below is the conversation history "
+                "followed by the current user input. Use this context to provide a relevant "
+                "and contextually appropriate response."
+            )
+            
+            # Combine all context elements
+            enriched_input = (
+                f"{system_context}\n\n"
+                f"{context}\n"
+                f"[CURRENT USER INPUT]\n{user_input}\n"
+            )
+            
+            # Get response from orchestrator
+            response = self.orchestrator.process_query(enriched_input)
+            
+            # Format the response for display
             formatted_response = self._format_response(response)
             logger.info("Successfully processed and formatted response")
             

@@ -244,7 +244,7 @@ if __name__ == "__main__":
         tab_interactions, tab_logs, tab_params = st.tabs([
             "⚡ Interactions", 
             "📋 Logs",
-            "⚙️ Paramètres"
+            "⚙️ Parameters"
         ])
         
         with tab_interactions:

@@ -75,11 +75,17 @@ class FileSearchDisplay(BaseInteractionDisplay):
                 pyperclip.copy(file_path)
                 st.toast("Chemin copié !", icon="✅")
 
+    #TODO: améliorer la gestion des path avec everything.exe
     def _launch_everything_gui(self, query: str) -> None:
         """Launch Everything GUI with the given query."""
         import subprocess
         logger.info("Launching Everything GUI with query: %s", query)
-        query4everything = query.replace('path:"','')
+        query_parts = query.split('path:', 1)
+        query = query_parts[0].strip()
+        query_path = query_parts[1].strip() if len(query_parts) > 1 else ''
+        logger.info("Query: %s", query)
+        logger.info("Query Path: %s", query_path)
+        query4everything = f'{query} {query_path}'.strip()
         logger.info("Query for Everything: %s", query4everything)
         everything_path = r"C:\Program Files\Everything\Everything.exe"
         subprocess.Popen([everything_path, "-search", query4everything])

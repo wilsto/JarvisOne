@@ -9,9 +9,14 @@ from typing import Any, Dict, Optional
 from pathlib import Path
 import hashlib
 from dotenv import load_dotenv
+import yaml
 
 # Load environment variables
 load_dotenv()
+
+# Load configuration
+with open('config/app_state.yaml', 'r') as f:
+    config = yaml.safe_load(f)
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -21,7 +26,9 @@ class LLMCache:
     
     def __init__(self, cache_dir: str = ".cache/llm"):
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_enabled = config.get('cache_enabled', True)
+        if self.cache_enabled:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
         
     def _get_cache_key(self, prompt: str, model: str) -> str:
         """Generate a cache key from prompt and model."""
@@ -30,6 +37,9 @@ class LLMCache:
         
     def get(self, prompt: str, model: str) -> Optional[str]:
         """Get cached response if exists."""
+        if not self.cache_enabled:
+            return None
+            
         cache_key = self._get_cache_key(prompt, model)
         cache_file = self.cache_dir / f"{cache_key}.json"
         
@@ -47,6 +57,9 @@ class LLMCache:
         
     def set(self, prompt: str, model: str, response: str):
         """Cache a response."""
+        if not self.cache_enabled:
+            return
+            
         cache_key = self._get_cache_key(prompt, model)
         cache_file = self.cache_dir / f"{cache_key}.json"
         
