@@ -9,6 +9,7 @@ from typing import List
 from datetime import datetime
 import random
 import uuid
+import shlex
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -55,22 +56,26 @@ def query_in_context(query: str) -> str:
 
 def execute_search(query: str) -> List[str]:
     """Execute Everything search with the formatted query."""
+    if not isinstance(query, str) or not query.strip():
+        logger.warning("Invalid query provided")
+        return []
+        
     # Add context to query
     query = query_in_context(query)
     
-    logger.info(f"Executing Everything search with command: {os.path.join('C:\\Program Files\\Everything', 'es.exe')} {query}")
-    
     try:
-
         # Path to Everything CLI executable
         es_path = "C:\\Program Files\\Everything\\es.exe"
         
-        # Construct and log the command
-        command = f'"{es_path}" {query}'
-
-        # Execute search
+        # Use list of arguments instead of shell=True
+        cmd = [es_path]
+        cmd.extend(shlex.split(query))  # Safely split the query into arguments
+        
+        logger.info(f"Executing Everything search with command: {' '.join(cmd)}")
+        
+        # Execute search with explicit arguments
         result = subprocess.run(
-            command,
+            cmd,
             capture_output=True,
             text=True,
             check=True

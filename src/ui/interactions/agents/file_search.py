@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import pyperclip
 import logging
+import shlex
 from typing import Dict, Any
 from ..base import BaseInteractionDisplay
 
@@ -78,14 +79,27 @@ class FileSearchDisplay(BaseInteractionDisplay):
     #TODO: améliorer la gestion des path avec everything.exe
     def _launch_everything_gui(self, query: str) -> None:
         """Launch Everything GUI with the given query."""
-        import subprocess
+        if not isinstance(query, str):
+            logger.warning("Invalid query type provided")
+            return
+            
         logger.info("Launching Everything GUI with query: %s", query)
+        
+        # Split query and path components safely
         query_parts = query.split('path:', 1)
-        query = query_parts[0].strip()
+        search_query = query_parts[0].strip()
         query_path = query_parts[1].strip() if len(query_parts) > 1 else ''
-        logger.info("Query: %s", query)
-        logger.info("Query Path: %s", query_path)
-        query4everything = f'{query} {query_path}'.strip()
+        
+        # Combine query components safely
+        query4everything = f'{search_query} {query_path}'.strip()
         logger.info("Query for Everything: %s", query4everything)
-        everything_path = r"C:\Program Files\Everything\Everything.exe"
-        subprocess.Popen([everything_path, "-search", query4everything])
+        
+        try:
+            everything_path = r"C:\Program Files\Everything\Everything.exe"
+            cmd = [everything_path, "-search"]
+            cmd.extend(shlex.split(query4everything))
+            
+            subprocess.Popen(cmd)
+        except Exception as e:
+            logger.error("Failed to launch Everything GUI: %s", str(e))
+            st.error("Failed to launch Everything GUI. Please try again.")
