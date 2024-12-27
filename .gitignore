@@ -34,6 +34,7 @@ ENV/
 # Logs
 *.log
 log/
+logs/
 .cache/
 
 # Local configuration
@@ -47,3 +48,5 @@ log/
 Thumbs.db
 data/conversations.db
 docs/~$features.pptx
+data/conversations.db-journal
+data/conversations copy.db

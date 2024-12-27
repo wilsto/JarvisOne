@@ -6,6 +6,10 @@ from ui.styles import get_all_styles
 from core.knowledge_space import KnowledgeSpaceManager, SpaceType
 from pathlib import Path
 from core.core_agent import CoreAgent
+from core.database.db_cleaner import clean_database
+from core.database.models import init_database
+from sqlalchemy.orm import sessionmaker
+from ui.apps import display_apps
 import yaml
 from datetime import datetime
 
@@ -242,9 +246,8 @@ if __name__ == "__main__":
             st.markdown("### Library")
             st.info("Library features coming soon!")
         with apps_tab:
-            st.markdown("### Apps")
-            st.info("Apps integration coming soon!")
-    
+            display_apps()
+
     # Colonne latérale pour les logs et les interactions (1/3)
     with col_side:
         tab_interactions, tab_logs, tab_params = st.tabs([
