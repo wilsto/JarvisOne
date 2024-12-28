@@ -43,6 +43,12 @@ class ChatProcessor:
             st.session_state.current_conversation_id = None
         logger.info("Session initialized")
             
+    def update_workspace(self):
+        """Update the chat processor for workspace change."""
+        # Update LLM model with new workspace configuration
+        self.orchestrator.update_llm()
+        logger.info("Updated chat processor for workspace change")
+            
     def _format_response(self, response: Any) -> str:
         """Format the response for display in chat.
         

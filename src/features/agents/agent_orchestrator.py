@@ -68,6 +68,14 @@ class AgentOrchestrator:
             logger.error(f"Error in agent selection: {str(e)}", exc_info=True)
             return self.available_agents["chat"]
 
+    def update_llm(self):
+        """Updates the LLM model with current workspace configuration."""
+        self.llm = get_llm_model()
+        # Update LLM for all agents
+        for agent in self.available_agents.values():
+            agent.llm = self.llm
+        logger.info("Updated LLM model for all agents")
+
     def process_query(self, user_query: str) -> Dict[str, Any]:
         """Process a user query through the appropriate agent."""
         try:

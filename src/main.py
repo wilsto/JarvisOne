@@ -211,8 +211,21 @@ def sidebar():
         selected_space_type = next(space_type for name, space_type in space_options if name == selected_space)
         if selected_space_type != st.session_state.workspace:
             old_space = st.session_state.workspace
-            st.session_state.workspace = selected_space_type
+            
+            # First save the state to ensure persistence
             save_app_state(selected_space_type)
+            
+            # Then update workspace manager
+            st.session_state.workspace_manager.set_current_space(selected_space_type)
+            
+            # Update session state after workspace manager
+            st.session_state.workspace = selected_space_type
+            
+            # Clear chat state to force reinitialization
+            if 'chat_processor' in st.session_state:
+                del st.session_state.chat_processor
+            if 'messages' in st.session_state:
+                del st.session_state.messages
             
             # Log the configuration change
             if 'interactions' not in st.session_state:
@@ -224,6 +237,8 @@ def sidebar():
                 'new_value': selected_space_type.name,
                 'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             })
+            
+            # Force a complete rerun to reinitialize everything
             st.rerun()
 
 # Configuration du style pour utiliser toute la largeur
