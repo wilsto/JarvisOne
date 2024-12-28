@@ -163,7 +163,7 @@ def sidebar():
         
         # Workspace Selection
         space_options = [
-            ("Agnostic", SpaceType.AGNOSTIC),
+            ("General", SpaceType.AGNOSTIC),
             ("Work", SpaceType.WORK),
             ("Personal", SpaceType.PERSONAL),
             ("Dev", SpaceType.DEV),

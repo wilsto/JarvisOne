@@ -38,11 +38,11 @@ class WorkspaceManager:
         spaces_dir = self.config_dir / "spaces"
         for space_type in SpaceType:
             if space_type == SpaceType.AGNOSTIC:
-                # Load agnostic config file for metadata and scope
-                agnostic_file = spaces_dir / "agnostic_config.yaml"
+                # Load general config file for metadata and scope
+                general_file = spaces_dir / "general_config.yaml"
                 metadata = {}
-                if agnostic_file.exists():
-                    with open(agnostic_file, 'r', encoding='utf-8') as f:
+                if general_file.exists():
+                    with open(general_file, 'r', encoding='utf-8') as f:
                         config_data = yaml.safe_load(f)
                         metadata = config_data.get('metadata', {})
                         # Load scope into metadata if present
@@ -50,7 +50,7 @@ class WorkspaceManager:
                             metadata['scope'] = config_data['scope']
                 
                 self.spaces[space_type] = SpaceConfig(
-                    name="Agnostic",
+                    name="General",
                     paths=[],
                     metadata=metadata,
                     search_params={},
