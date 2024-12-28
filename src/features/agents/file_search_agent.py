@@ -142,7 +142,7 @@ everything_docs = get_everything_docs()
 
 agent = CoreAgent(
     agent_name="File Search Agent",
-    system_instructions=[
+    system_instructions="\n".join([
         "You are a file search query analyzer for the Everything search engine.",
         "Convert natural language to Everything search syntax.",
         "Use this documentation:",
@@ -169,7 +169,7 @@ agent = CoreAgent(
         "",
         "ANY OUTPUT NOT FOLLOWING THESE RULES EXACTLY WILL BE REJECTED.",
         "REMEMBER: RETURN ONLY THE RAW QUERY STRING."
-    ],
+    ]),
     tools=[execute_search],
     output_formatter=lambda results, transformed_query, interaction_id: format_result(results, transformed_query, interaction_id),
     interactions=handle_search_interaction

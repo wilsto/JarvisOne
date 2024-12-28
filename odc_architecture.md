@@ -1,49 +1,52 @@
-# ODC d'Architecture pour JarvisOne
+# **JarvisOne Architecture Objectives, Dependencies, and Constraints (ODC)**
 
-## Objectifs d'Architecture
+## Architectural Objectives
 
-* **Modularité :**
-  * Concevoir une architecture modulaire facilitant l'ajout de nouvelles fonctionnalités et l'évolution du système.
-  * L'architecture doit être extensible pour intégrer de nouveaux LLM ou outil externe.
-* **Adaptabilité :**
-  * L'architecture doit permettre de connecter différentes sources de données.
-* **Sécurité :**
-  * L'architecture doit assurer des sécurité d'accès au système et aux données.
-* **Performance :**
-  * Concevoir une architecture qui ne pénalise pas le temps de réponse.
-* **Réutilisabilité :**
-  * Les composants doivent être réutilisables autant que possible.
-* **Maintenance**
-  * L'architecture doit faciliter la maintenance et la compréhension du système par d'autres développeurs.
+* **Modularity:**
+  * Design a modular architecture to facilitate the addition of new features and system evolution.
+  * The architecture should be extensible to integrate new LLMs or external tools.
+* **Adaptability:**
+  * The architecture should allow connecting different data sources.
+* **Security:**
+  * The architecture must ensure secure access to the system and its data.
+* **Performance:**
+  * Design an architecture that minimizes response time.
+* **Reusability:**
+  * Components should be reusable as much as possible.
+* **Maintainability:**
+  * The architecture should be easy to understand and maintain by other developers.
 
-## Dépendances d'Architecture
+## Architectural Dependencies
 
-* **Architecture en Couches :**
-  * L'architecture est organisée en couches pour une meilleure séparation des préoccupations.
-* **Flux de Traitement:**
-  * La requête utilisateur est traitée en respectant le schéma décrit dans la section 'High-Level Flow' du fichier `.windsurfrules`.
-* **Agents :**
-  * Utilisation d'agents intelligents pour l'analyse des requêtes et l'interaction avec les outils externes.
-  * `query_analyzer_agent.py` pour l'analyse des requêtes.
-  * `file_search_agent.py` pour l'interaction avec l'outil `everything`.
-* **Interface Utilisateur :**
-  * Utiliser l'input text de Streamlit pour les inputs.
-  * Intégrer les interfaces natives des outils externes pour l'affichage des résultats quand approprié.
-  * Interface adaptative selon les outils utilisés.
+* **Layered Architecture:**
+  * The architecture is organized in layers for a clear separation of concerns.
+* **Workflow:**
+  * The user request is processed according to a specific flow.
+* **Agents:**
+  * Intelligent agents handle request analysis and interaction with external tools.
+  * `query_analyzer_agent.py` for query analysis.
+  * `file_search_agent.py` for interaction with the `everything` tool.
+* **User Interface (UI):**
+  * Streamlit's text input for user inputs.
+  * Native interfaces of external tools for displaying results when available.
+  * A flexible interface adapts based on the tools used.
+* **System Prompts:**
+  * Each workspace utilizes a system prompt to guide the agent's behavior and expertise.
 
-## Contraintes d'Architecture
+## Architectural Constraints
 
-* **Modularité :**
-  * La modularité doit être respectée lors de l'implémentation de nouvelles fonctionnalités
-* **Performance :**
-  * L'architecture doit minimiser la latence d'exécution.
-* **Sécurité :**
-  * L'architecture doit minimiser les risques de failles de sécurité (accès aux données, accès aux LLMs).
-* **Utilisation d'outils externes**
-  * L'architecture doit utiliser l'interface des outils externes si elle existe pour l'affichage des résultats.
-  * L'architecture doit éviter au maximum de ré-implémenter des fonctionnalités déjà existantes.
+* **Modularity:**
+  * Modularity must be maintained during new feature implementation.
+* **Performance:**
+  * The architecture must minimize execution latency.
+* **Security:**
+  * The architecture must minimize security risks (data access, access to LLMs).
+* **External Tools:**
+  * Use external tool interfaces to display results.
+  * Avoid reimplementing existing functionalities.
+  * Use of an interaction for each usage of an external tool.
 
-## Repository File Structure
+## Core File Structure
 
 JarvisOne/
 ├── main.py                   # Main entry point
@@ -75,36 +78,12 @@ JarvisOne/
 
 ## Architectural Logic
 
-### High-Level Flow (Target)
+### Core Processing Flow
 
-The target system follows a specific flow for each user request, starting with a user query and ending with a final response.
-This flow includes caching, context construction, input and output safeguards, and access to both internal and external data sources.
-
-1. **User Query:** The process begins with a natural language query from the user via the chat interface.
-2. **Initial Cache Lookup:** Before processing the query, the system checks a local cache to see if a similar query has been processed before. If a cached response is available, it is returned immediately.
-3. **Context Construction:** If the query is not cached, it goes through a context construction phase. This involves:
-    - **RAG (Retrieval-Augmented Generation):** Retrieving relevant information from external sources to enrich the query context. (À conserver pour plus tard)
-    - **Agent Interaction:** Using an intelligent agent to analyze the query and determine necessary actions.
-    - **Query Rewriting:** Refining or rephrasing the query for better processing.
-4. **Input Guardrails:** The enriched query is then passed through input guardrails for security. This includes actions like:
-    - **PII Redaction:** Removing or masking personally identifiable information.
-5. **Data Access and Retrieval:** Depending on the context, the system can access various data sources:
-    - **Read-only Actions:** These allow retrieval of data from various sources:
-        - **Vector Search:** Performing semantic searches based on vector representations of data. (À conserver pour plus tard)
-        - **SQL Query Execution:** Running SQL queries against databases.
-        - **Web Search:** Searching for relevant information on the web.
-    - **Databases:** These contain persistent data such as:
-        - Documents, tables, chat histories, vector databases, etc.
-6. **Model Gateway:** The core of the system, handling:
-    - **Model Catalog:** Managing and selecting different language models.
-    - **Access Token Management:** Securely managing authentication tokens for the models.
-    - **Routing:** Selecting the most appropriate model for the current query.
-    - **Generation:** Using the chosen model to generate a response.
-    - **Scoring:** Evaluating the quality of the generated response.
-7. **Output Guardrails:** Before the response is returned, it is checked by output guardrails. This includes:
-    - **Safety/Verification:** Ensuring the response is safe, ethical, and free of errors.
-    - **Structured Outputs:** Formatting the response for easy use.
-8. **Final Response:** The user receives the final response.
-9. **Response Caching:** The final response is stored in the cache for future reuse.
-10. **Write Actions (Secondary):** If necessary, after the response is returned, the system may execute write actions to modify the state. This can include:
-    - Updating orders, sending emails, etc.
+1. **User Query**: The user submits a query using natural language via the chat interface.
+2. **Agent Interaction**: An intelligent agent processes the query and identifies actions required.
+3. **Data Access**: Data is retrieved from various data sources.
+4. **Tool Interaction**: External tool interfaces are used to perform actions and display their results.
+5. **Response Generation**: A language model generates a response.
+6. **Interaction Handling**: The response is displayed via an interaction in the UI
+7. **Final Response**: The user receives the final response in the chat.

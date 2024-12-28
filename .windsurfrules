@@ -1,86 +1,70 @@
-# JarvisOne
+# **JARVISONE PROJECT CONTEXT** 🤖
 
-## Project Structure and Analysis
+## Project Overview
 
-### MOST IMPORTANT RULES
+JarvisOne is a modular, scalable, conversational AI assistant.
 
-- START ALWAYS by reading `project_structure.md` to understand the application structure and modularity purpose BEFORE any analysis.
-- A thorough analysis is MANDATORY before attempting to implement any new code.
-- Acknowledged explicitly each time these 2 previous rules.
-- Ask questions to the author if any doubt or clarification needs to be made about purposes not technical questions.
-
-## Project Context
-
-JarvisOne is a modular and scalable conversational AI assistant.
-
-- Uses multiple LLM models (Gemini 2.0, ChatGPT-4, Ollama) for increased flexibility
-- Integrates RAG (Retrieval-Augmented Generation) capabilities for enhanced contextualization (À conserver pour plus tard)
-- Designed with a modular architecture allowing easy addition of new features
-- Includes document management capabilities and user-friendly interface
-- **Core interface is a chat, allowing natural language interaction**
-- **Implements a layered architecture inspired by the provided diagram, ensuring modularity and security.**
-
-- Ensure that the proposed changes align with the existing architecture and follow the established patterns.
-- Consider the impact on other modules and potential dependencies when suggesting modifications.
-- Verify that new implementations adhere to the SOLID principles and coding guidelines outlined in the project documentation.
+* **LLMs**: Uses Gemini 2.0, ChatGPT-4, Ollama, and Anthropic for flexibility.
+* **Workspaces**: Supports multiple workspaces (e.g., `coaching`, `dev`, `personal`, `servier`), each with its own specific configuration and system prompt.
+* **RAG**: (Future) Enhanced contextualization using Retrieval-Augmented Generation.
+* **Modular Design**: Designed for flexible and independent development; each component must have clear responsibilities.
+* **Document Management**: Integrated document handling.
+* **Core UI**: **The primary way to interact with JarvisOne is via the Streamlit chat interface.**
+* **Layered Architecture**: Follows provided diagram, ensuring modularity.
 
 ## Tech Stack
 
-- Use Uv for Python development
-- Python 3.12
-- Streamlit 1.31+
-- Gemini 2.0 / ChatGPT-4 / Ollama 
-- Pytest + Streamlit Testing
-- PyYAML  
-- LangChain (À conserver pour plus tard)
-- FAISS (À conserver pour plus tard)
-- SentenceTransformers (À conserver pour plus tard)
-- GTTS / SpeechRecognition (À conserver pour plus tard)
+* **Python**: Use Uv, Python 3.12.
+* **Streamlit**: Version 1.31+ for UI.
+* **LLMs**: Gemini 2.0, ChatGPT-4, Ollama, Anthropic.
+* **Testing**: Pytest + Streamlit Testing.
+* **Config**: PyYAML.
+* **Future Technologies**: LangChain, FAISS, SentenceTransformers, GTTS/SpeechRecognition are considered for future enhancements.
 
-## Tools Used
+## Core Tools
 
-- Everything (<https://www.voidtools.com/>): File search tool.
-  - Path : C:\Program Files\Everything\es.exe
-    -Documentation Command line: docs\everything.md
+* **Everything**: File search using `C:\Program Files\Everything\es.exe`. See docs/everything.md for CLI.
 
-## Interface Utilisateur avec Streamlit
+## Streamlit UI Guidelines
 
-- Use Streamlit to create an interactive and responsive chat interface
-- Utilize Streamlit's built-in components for quick setup
-- Customize the appearance with Streamlit's themes
-- Implement a responsive layout using `st.columns` and `st.tabs` 
-- Use `st.session_state` for state management
-- Document the usage of specific Streamlit components in the code
-- Integrate UI configuration parameters from `config.yaml` (À conserver pour plus tard)
-- **Main interface is a chat using Streamlit's input text element**
-- **Leverage external tool's interface for output whenever possible to avoid re-implementation. For example, `anything`'s output is displayed using its interface.**
-- **For tools that don't have an interface or where an integration is necessary, output will be redirected to the chat interface**
+* **Layout**: The UI is divided into three main parts: a **sidebar** on the left, the **main chat area** in the center and a **right panel** for interactions, logs, and parameters.
+* **Header**: The header contains the title, workspace selector, and tools label and buttons.
+* **Tabs**: The header contains the main tabs for different sections : "Chat", "Library" and "Apps".
+* **Chat UI**: **The primary interface is a chat using Streamlit's input text element**.
+  * A welcome message introduces the assistant.
+  * User inputs are entered at the bottom of the chat area.
+  * Both user and assistant messages are displayed in the chat area.
+* **Components**: Use built-in components, customize themes, responsive layout (`st.columns`, `st.tabs`).
+* **State Management**: Use `st.session_state`.
+* **External Tool Integration**: **Leverage external tool interfaces for output whenever possible.**
+* **Interaction Handling**:
+  * Agents use interaction handlers to display results for tools and functionalities, typically displayed within an expander or dedicated view in the right panel.
+  * Results for an action are displayed inside an interaction, with appropriate metadata and action buttons.
+  * Whenever a tool is used, a new interaction should be created, and used to display results.
+  * **Actions buttons are to be placed in the interaction area, never in the main chat**.
+* **Redirect to Chat**: If no external interface available, redirect output to the chat interface.
+* **Agent Selection**: The `AgentOrchestrator` selects the appropriate agent based on user queries.
 
-## Unit Testing Guidelines
+## Unit Testing Principles
 
-### Test Structure and Organization
-- All test files must follow the pattern `test_*.py`
-- Tests should be organized mirroring the source code structure
-- Use centralized mock utilities from (tests/utils.py)
-- Group tests by feature/functionality using test classes
-- Use descriptive test names that explain the test scenario
-- Before writing tests, review nearby test files to maintain consistency
+* **File Pattern**: `test_*.py`
+* **Directory Structure**: Mirror source code structure.
+* **Mocks**: Use centralized utilities from `tests/utils.py`.
+* **Test Grouping**: By feature/function in classes.
+* **Descriptive Names**: Explain test scenario.
+* **Consistent Test Structure**: Review existing tests before adding new ones.
+* **Mock Utilities**:
+  * Use `MockSessionState` for Streamlit.
+  * Add new mocks to `tests/utils.py` with docstrings.
+* **Coverage**: 80% minimum, 100% for critical paths.
+* **Test Types**: Success, error, edge cases, boundaries.
 
-### Mock Utilities (tests/utils.py)
-- Use the provided (MockSessionState) for Streamlit tests
-- All new mock utilities must be added to (tests/utils.py)
-- Document each mock utility with clear docstrings
-- Keep mock utilities generic and reusable
+## Objectives, Dependencies, and Constraints (ODC)
 
-### Test Coverage Requirements
-- Minimum 80% code coverage for new features
-- 100% coverage for critical paths
-- Test both success and error scenarios
-- Include edge cases and boundary conditions
+* **Architecture Constraint**: **Technical and architecture constraints are documented in** `odc_technique.md` and `odc_architecture.md`.
 
-## Objectifs, Dépendances et Contraintes (ODC)
+## Workspace Configuration
 
-- Les ODC techniques sont documentées dans le fichier `odc_technique.md`.
-- Les ODC d'architecture sont documentées dans le fichier `odc_architecture.md`.
-
-
+* **Workspace-Specific Settings**: Each workspace (e.g., `coaching`, `dev`, `personal`, `servier`) has its own configuration file (e.g., `coaching_config.yaml`) located in the `config/spaces/` directory.
+* **Configuration Includes**: Path, File types, System prompt, and specific settings.
+* **System Prompt**: **The system prompt is the primary mechanism for defining the AI agent's role, behavior, and expertise within each workspace.**

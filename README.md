@@ -1,71 +1,66 @@
 <!-- markdownlint-disable MD029 -->
-# JarvisOne
+# JarvisOne: Your Modular Personal AI Assistant 
 
-JarvisOne est un assistant conversationnel modulaire et évolutif qui intègre des capacités d'interaction avec des outils externes, notamment pour la recherche de fichiers.
+JarvisOne is a modular and scalable conversational AI assistant that integrates with external tools, notably for file searching. Designed to be flexible and customizable, JarvisOne allows you to interact with different LLMs and manage your files effectively.
 
-## Fonctionnalités
+## Key Features ✨
 
-- 🔧 Architecture modulaire pour l'intégration d'outils externes
-- 🔍 Recherche de fichiers via Everything (exemple d'intégration)
-- 🤖 Support de multiples modèles LLM (OpenAI, Ollama)
-- 💬 Interface de chat intuitive avec Streamlit
-- ⚙️ Configuration flexible des fournisseurs LLM et outils externes
+* **Modular Architecture:** Built for easy integration of new features and external tools.
+* **File Search:** Powerful file searching capability via integration with [Everything](https://www.voidtools.com/).
+* **Multiple LLMs:** Supports various Language Models, including Gemini 2.0, ChatGPT-4, Ollama and Anthropic.
+* **Workspace Support:** Multiple workspaces each with unique system prompt.
+* **Intuitive Chat Interface:** User-friendly chat interface built with Streamlit.
+* **Flexible Configuration:** Easy configuration of LLM providers, external tools, and system prompts for different use cases.
 
-## Installation
+## Installation 🚀
 
-1. Cloner le dépôt :
+1. **Clone the repository:**
 
-```bash
-git clone https://github.com/votre-username/JarvisOne.git
-cd JarvisOne
-```
+    ```bash
+    git clone https://github.com/your-username/JarvisOne.git
+    cd JarvisOne
+    ```
 
-2. Installer les dépendances :
+2. **Install dependencies:**
 
-```bash
-pip install -r requirements.txt
-```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-3. Configurer l'environnement :
+3. **Configure your environment:**
+    * Copy `.env.example` to `.env`.
+    * Add your API keys and paths to external tools to the `.env` file as needed.
+    * Make sure to setup your `config/config.yaml` to your specifications
 
-- Copier `.env.example` vers `.env`
-- Ajouter vos clés API et chemins des outils externes si nécessaire
+4. **Install required external tools:**
+    * For file searching: Download and install [Everything](https://www.voidtools.com/).
+    * Ensure that external tools are correctly configured and running.
 
-4. Installer les outils externes requis :
+## Usage 💬
 
-- Pour la recherche de fichiers : Télécharger et installer [Everything](https://www.voidtools.com/)
-- Assurez-vous que les outils externes sont correctement configurés et en cours d'exécution
+1. **Launch the application:**
 
-## Utilisation
+    ```bash
+    streamlit run src/main.py
+    ```
 
-1. Lancer l'application :
+2. **In the interface:**
+    * Select your preferred LLM provider and workspace from the sidebar.
+    * Use the chat input to interact with JarvisOne.
+    * Access external tool functionalities via natural language in the chat.
 
-```bash
-streamlit run src/main.py
-```
+## Usage Examples 💡
 
-2. Dans l'interface :
+* "Find markdown files modified today" (using Everything).
+* "Search for Word documents containing 'report'" (using Everything).
+* "Explain the prompt system"
 
-- Sélectionnez votre fournisseur LLM préféré
-- Utilisez le chat pour interagir avec JarvisOne
-- Accédez aux fonctionnalités des outils externes via le chat
+## Contribution Guidelines 🤝
 
-## Exemples d'utilisation
+Contributions are welcome! Here’s how you can contribute:
 
-- "Trouve les fichiers PDF modifiés aujourd'hui" (via Everything)
-- "Cherche les documents Word contenant 'rapport'" (via Everything)
-- "Liste les images dans le dossier Documents" (via Everything)
-
-## Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-## Licence
-
-Distribué sous la licence MIT. Voir `LICENSE` pour plus d'informations.
+1. Fork the project.
+2. Create a new branch: `git checkout -b feature/YourFeature`.
+3. Commit your changes: `git commit -m 'Add YourFeature'`.
+4. Push to the branch: `git push origin feature/YourFeature`.
+5. Open a pull request.
