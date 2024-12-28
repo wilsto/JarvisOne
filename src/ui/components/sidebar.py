@@ -17,13 +17,13 @@ def render_sidebar():
                   help="This is a custom header",
                   divider="rainbow")
         
-        # Knowledge Space Selection
+        # Workspace Selection
         space_options = [
             ("Agnostic", SpaceType.AGNOSTIC),
-            ("Servier", SpaceType.SERVIER),
-            ("Personnel", SpaceType.PERSONAL),
+            ("Personal", SpaceType.PERSONAL),
+            ("Dev", SpaceType.DEV),
             ("Coaching", SpaceType.COACHING),
-            ("Développement", SpaceType.DEV)
+            ("Work", SpaceType.WORK),
         ]
         
         current_index = next(
@@ -33,13 +33,13 @@ def render_sidebar():
         )
         
         selected_space = st.selectbox(
-            "Espace de connaissances",
+            "Workspace",
             options=[name for name, _ in space_options],
             index=current_index,
             key="workspace_select"
         )
         
-        # Update knowledge space if changed
+        # Update Workspace if changed
         selected_space_type = next(space_type for name, space_type in space_options if name == selected_space)
         if selected_space_type != st.session_state.workspace:
             old_space = st.session_state.workspace
@@ -64,7 +64,7 @@ def render_sidebar():
             with open(config_file, 'w', encoding='utf-8') as f:
                 yaml.dump(current_state, f)
             
-            logger.info(f"Switched knowledge space from {old_space} to {selected_space_type}")
+            logger.info(f"Switched Workspace from {old_space} to {selected_space_type}")
             
             # Rerun to update UI
             st.rerun()

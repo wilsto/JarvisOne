@@ -17,8 +17,8 @@ def test_chat_welcome_message(chat_app):
     welcome_texts = [elem.value for elem in chat_app.markdown]
     welcome_text = "".join(welcome_texts)
     assert "JarvisOne" in welcome_text
-    assert "recherche de fichiers" in welcome_text
-    assert "Comment puis-je vous aider" in welcome_text
+    assert "file search" in welcome_text.lower()
+    assert "How can I assist you" in welcome_text
 
 def test_chat_interface_elements(chat_app):
     """Test that chat interface elements exist"""
@@ -30,3 +30,4 @@ def test_chat_interface_elements(chat_app):
     # Check for chat input
     chat_inputs = chat_app.text_input
     assert len(chat_inputs) > 0  # At least one text input should exist
+u

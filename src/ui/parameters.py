@@ -42,9 +42,9 @@ def display_parameters():
     # Cache Control
     st.subheader("Cache")
     cache_enabled = st.toggle(
-        "Activer le cache",
+        "Enable cache",
         value=st.session_state.cache_enabled,
-        help="Active ou désactive le cache des requêtes",
+        help="Enable or disable request caching",
         key="cache_toggle"
     )
     
@@ -102,7 +102,7 @@ def display_parameters():
     models = get_provider_models(selected_provider)
     
     if not models and selected_provider == "Ollama (Local)":
-        st.warning("Aucun modèle Ollama trouvé. Installez des modèles avec 'ollama pull'")
+        st.warning("No Ollama models found. Install models using 'ollama pull'")
         return
     
     # Initialize model selection
@@ -141,14 +141,14 @@ def display_parameters():
         # Get current API key from env
         current_key = ConfigManager.get_api_key(selected_provider)
         if current_key:
-            st.success("✅ Clé API configurée dans .env")
+            st.success("✅ API key configured in .env")
         else:
             # Allow temporary key input
-            st.warning("⚠️ Clé API non trouvée dans .env")
+            st.warning("⚠️ API key not found in .env")
             api_key = st.text_input(
-                f"Clé API {selected_provider}:",
+                f"{selected_provider} API key:",
                 type="password",
-                help=f"Entrez votre clé API pour {selected_provider} (temporaire pour cette session)"
+                help=f"Enter your API key for {selected_provider} (temporary for this session)"
             )
             if api_key:
                 st.session_state[f"{selected_provider.lower()}_api_key"] = api_key
@@ -156,7 +156,7 @@ def display_parameters():
         # Show organization ID if available
         org_id = ConfigManager.get_org_id(selected_provider)
         if org_id:
-            st.info(f"🏢 ID Organisation configuré: {org_id}")
+            st.info(f"🏢 Organization ID configured: {org_id}")
             
 
             
@@ -167,8 +167,8 @@ def display_parameters():
             
         st.session_state.interactions.append({
             'type': 'config_change',
-            'config_type': 'Configuration LLM',
-            'old_value': f"{st.session_state.get('last_provider', 'Non défini')} - {st.session_state.get('last_model', 'Non défini')}",
+            'config_type': 'LLM Configuration',
+            'old_value': f"{st.session_state.get('last_provider', 'Not set')} - {st.session_state.get('last_model', 'Not set')}",
             'new_value': f"{selected_provider} - {selected_model}",
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })

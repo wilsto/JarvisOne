@@ -68,20 +68,20 @@ def generate_welcome_message(scope: str) -> str:
             print(f"Found capability: {capability}")  # Debug
 
     # Build welcome message
-    welcome_message = "👋 Bonjour, je suis JarvisOne, votre assistant IA !\n\n"
+    welcome_message = "👋 Hello, I'm JarvisOne, your AI assistant!\n\n"
     
     if capabilities:
         print(f"Total capabilities found: {len(capabilities)}")  # Debug
-        welcome_message += "Je peux vous aider avec :\n"
+        welcome_message += "I can help you with:\n"
         for capability in capabilities[:5]:  # Limit to top 5 capabilities for conciseness
             welcome_message += f"• {capability}\n"
         
         if len(capabilities) > 5:
-            welcome_message += "• Et plus encore...\n"
+            welcome_message += "• And more...\n"
     else:
         print("No capabilities found in scope")  # Debug
     
-    welcome_message += "\nComment puis-je vous aider aujourd'hui ?"
+    welcome_message += "\nHow can I assist you today?"
     print(f"Generated welcome message: {welcome_message}")  # Debug
     
     return welcome_message

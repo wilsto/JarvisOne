@@ -101,11 +101,11 @@ def test_display_results_limit(mock_streamlit, large_interaction):
         
         # Verify metric shows total count
         mock_streamlit['metric'].assert_called_once_with(
-            "Total trouvé", 15, label_visibility="visible"
+            "Total found", 15, label_visibility="visible"
         )
         
         # Verify remaining count message for items > 10
-        remaining_msg = "+ 5 autres fichiers trouvés"
+        remaining_msg = "+ 5 more files found"
         mock_streamlit['markdown'].assert_any_call(
             f"<div class='remaining-count'>{remaining_msg}</div>",
             unsafe_allow_html=True

@@ -41,7 +41,7 @@ def test_chat_initialization(mock_session_state):
     # Check welcome message content
     welcome_content = mock_session_state.messages[0]["content"]
     assert "JarvisOne" in welcome_content
-    assert "recherche de fichiers" in welcome_content
+    assert "file search" in welcome_content.lower()
     assert "👋" in welcome_content
 
 def test_init_chat_processor(mock_session_state):

@@ -5,69 +5,71 @@ import streamlit as st
 from datetime import datetime
 import uuid
 
-# Configuration du logger
+# Configure logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+AGENT_SELECTION_PROMPT = """
+Analyze the user query and determine which agent should handle it.
+
+For file search agent:
+- Query is about searching or manipulating files
+- Contains words like: file, find, search, modified, created
+- Mentions file extensions (.py, .txt, etc.) or file types (python, text, etc.)
+- Contains date modifiers (today, yesterday, last week)
+
+For chat agent:
+- Not about file search
+- General questions or conversations
+- Code-related questions
+- Task planning or organization
+- Any other topic not covered by file search
+
+Return ONLY 'file_search_agent' or 'chat_agent' based on the query.
+"""
+
 def analyze_query_tool(query: str, llm: LLM) -> str:
     """
-    Outil d'analyse de requête pour déterminer l'agent approprié.
+    Query analysis tool to determine the appropriate agent.
     
     Args:
-        query: La requête de l'utilisateur.
-        llm: Instance LLM partagée à utiliser.
+        query: The user's query.
+        llm: Shared LLM instance to use.
         
     Returns:
-        Le nom de l'agent à utiliser.
+        The name of the agent to use.
     """
-    # Créer un prompt pour l'analyse
-    prompt = f"""Analyser la requête suivante et déterminer l'agent le plus approprié:
-    "{query}"
-    
-    Règles de sélection :
-    1. Utiliser 'file_search_agent' si la requête :
-       - Concerne la recherche ou manipulation de fichiers
-       - Contient des mots comme : fichier, file, trouve, cherche, search, modifié, créé
-       - Mentionne des extensions (.py, .txt, etc.) ou types de fichiers (python, text, etc.)
-       
-    2. Utiliser 'chat_agent' si :
-       - C'est une question générale
-       - Demande des explications ou informations
-       - Ne concerne pas la recherche de fichiers
-    
-    Répondre UNIQUEMENT avec 'file_search_agent' ou 'chat_agent'.
-    """
-    
-    # Utiliser le LLM partagé pour analyser
+    # Use shared LLM for analysis
+    prompt = AGENT_SELECTION_PROMPT + f"\n\nQuery: {query}\n\n"
     response = llm.generate_response(prompt).lower().strip()
     logger.info(f"Query: '{query}' → Agent selected: '{response}'")
     
-    # Créer l'analyse
+    # Create analysis
     analysis = {
         'agent_selected': response,
-        'reason': 'Recherche de fichiers' if response == 'file_search_agent' else 'Question générale'
+        'reason': 'File search' if response == 'file_search_agent' else 'General question'
     }
     
-    # Créer l'interaction
+    # Create interaction
     handle_query_interaction(query, analysis)
     
-    # Vérifier si la réponse est un agent valide
+    # Check if response is a valid agent
     if response in ['file_search_agent', 'chat_agent']:
         return response
     
-    # Par défaut, utiliser l'agent de chat
-    logger.warning(f"Agent non reconnu '{response}', utilisation de chat_agent par défaut")
+    # Default to chat agent
+    logger.warning(f"Unrecognized agent '{response}', defaulting to chat_agent")
     return "chat_agent"
 
 def handle_query_interaction(transformed_query: str, analysis: dict) -> str:
-    """Gère l'affichage de l'analyse de requête dans l'interface.
+    """Handle the display of query analysis in the interface.
     
     Args:
-        transformed_query: La requête analysée
-        analysis: Le résultat de l'analyse
+        transformed_query: The analyzed query
+        analysis: The analysis result
         
     Returns:
-        str: L'ID de l'interaction créée
+        str: The ID of the created interaction
     """
     if "interactions" not in st.session_state:
         st.session_state.interactions = []
@@ -83,7 +85,7 @@ def handle_query_interaction(transformed_query: str, analysis: dict) -> str:
     
     return interaction_id
 
-# Créer une instance de l'agent d'analyse
+# Create query analyzer agent instance
 agent = CoreAgent(
     agent_name="Query Analyzer Agent",
     system_instructions=[
@@ -95,13 +97,13 @@ agent = CoreAgent(
         "2. NO explanations or comments",
         "3. NO line breaks or extra spaces",
     ],
-    output_formatter=None,  # Pas besoin de formateur spécial
+    output_formatter=None,  # No special formatter needed
     interactions=handle_query_interaction
 )
 
 if __name__ == '__main__':
     from core.llm_manager import get_llm_model
     llm = get_llm_model()
-    query = "cherche un fichier pdf"
+    query = "find a pdf file"
     response = analyze_query_tool(query, llm)
-    print(f"Agent sélectionné: {response}")
+    print(f"Selected agent: {response}")

@@ -13,11 +13,11 @@ from ui.apps import display_apps
 import yaml
 from datetime import datetime
 
-# Configurer le logging en premier
+# Configure logging first
 setup_logging()
 
 def load_app_state() -> dict:
-    """Charge l'état de l'application depuis le fichier de configuration."""
+    """Load application state from configuration file."""
     config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
     default_state = {
         "workspace": "AGNOSTIC",
@@ -30,11 +30,13 @@ def load_app_state() -> dict:
     return default_state
 
 def initialize_session_state():
+    """Initialize session state with default values if not already set."""
+    # Load app state
+    app_state = load_app_state()
+    
+    # Initialize workspace first
     if 'workspace' not in st.session_state:
-        # Charger le dernier espace utilisé
-        app_state = load_app_state()
         st.session_state.workspace = SpaceType[app_state["workspace"]]
-        st.session_state.cache_enabled = app_state["cache_enabled"]
         print(f"Initialized workspace to: {st.session_state.workspace}")  # Debug
     
     if 'workspace_manager' not in st.session_state:
@@ -44,58 +46,62 @@ def initialize_session_state():
         print("Created new workspace manager")  # Debug
         print(f"Set current space to: {st.session_state.workspace}")  # Debug
     else:
-        # Synchroniser l'espace actuel avec le workspace manager
+        # Sync current space with workspace manager
         st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
         print(f"Synchronized workspace manager to: {st.session_state.workspace}")  # Debug
 
+    # Initialize cache state
+    if 'cache_enabled' not in st.session_state:
+        st.session_state.cache_enabled = app_state.get('cache_enabled', True)
+
 def get_search_title(query: str) -> str:
-    """Génère un titre court et explicite pour la recherche."""
-    # Extraire les mots clés de la requête
+    """Generate a short and explicit title for the search."""
+    # Extract keywords from the query
     words = query.lower().split()
     if "ext:" in query:
-        # Si la recherche contient une extension
+        # If the search contains an extension
         for word in words:
             if word.startswith("ext:"):
-                return f"Fichiers {word[4:].upper()}"
+                return f"Files {word[4:].upper()}"
     elif any(word.startswith("dm:") for word in words):
-        # Si la recherche contient une date
-        return "Fichiers récents"
+        # If the search contains a date
+        return "Recent files"
     else:
-        # Sinon, prendre les 3 premiers mots significatifs
+        # Otherwise, take the first 3 significant words
         significant_words = [w for w in words if len(w) > 2 and not w.startswith(("le", "la", "les", "un", "une", "des"))]
         return " ".join(significant_words[:3]).title()
 
 def display_logs():
-    """Affiche les logs dans un onglet dédié."""
-    # Barre de recherche et bouton de filtres sur la même ligne
+    """Display logs in a dedicated tab."""
+    # Search bar and filter button on the same line
     search_col, button_col = st.columns([5,1])
     
     with search_col:
-        search_term = st.text_input("🔍 Rechercher dans les logs", "")
+        search_term = st.text_input("🔍 Search logs", "")
     
     with button_col:
         show_filters = st.button("⚙️", key="show_filters", use_container_width=True)
     
-    # Options de filtrage dans un expander
+    # Filtering options in an expander
     if show_filters:
-        with st.expander("Filtres", expanded=True):
+        with st.expander("Filters", expanded=True):
             level_filter = st.multiselect(
-                "Niveau de log",
+                "Log level",
                 ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                 default=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
             )
     else:
         level_filter = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     
-    # Récupérer et filtrer les logs
+    # Retrieve and filter logs
     logs = get_logs()
     if level_filter:
         logs = [log for log in logs if log['level'] in level_filter]
     if search_term:
         logs = [log for log in logs if search_term.lower() in log['message'].lower()]
     
-    # Afficher les logs
-    for log in reversed(logs):  # Du plus récent au plus ancien
+    # Display logs
+    for log in reversed(logs):  # From most recent to oldest
         color = {
             'DEBUG': '#6c757d',
             'INFO': '#0d6efd',
@@ -113,37 +119,37 @@ def display_logs():
         )
 
 def display_interactions():
-    """Affiche les interactions et résultats de recherche."""
+    """Display interactions and search results."""
     if "interactions" not in st.session_state:
         st.session_state.interactions = []
         
     if not st.session_state.interactions:
-        st.info("Aucune interaction pour le moment. Les résultats de vos recherches apparaîtront ici.")
+        st.info("No interactions yet. Search results will appear here.")
         return
     
-    # Inverser l'ordre des interactions pour avoir les plus récentes en haut
+    # Reverse the order of interactions to have the most recent at the top
     interactions = list(reversed(st.session_state.interactions))
     
-    # Afficher chaque interaction
+    # Display each interaction
     for i, interaction in enumerate(interactions):
-        # Récupérer le handler approprié
+        # Retrieve the appropriate handler
         handler = InteractionDisplayFactory.get_display_handler(interaction['type'])
         
-        # Créer un expander avec le titre généré par le handler
+        # Create an expander with the title generated by the handler
         with st.expander(handler.get_expander_title(interaction), expanded=(i == 0)):
             handler.display(interaction)
 
 def create_agent(agent_type: str) -> CoreAgent:
-    """Create and initialize an agent with the current knowledge space."""
+    """Create and initialize an agent with the current workspace."""
     agent = CoreAgent(
         agent_name=agent_type,
-        system_instructions=f"You are a {agent_type} agent.",  # Instructions simples pour le moment
+        system_instructions=f"You are a {agent_type} agent.",  # Simple instructions for now
         workspace_manager=st.session_state.workspace_manager
     )
     return agent
 
 def save_app_state(space_type: SpaceType):
-    """Sauvegarde l'état de l'application."""
+    """Save the application state."""
     config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
     current_state = load_app_state()  # Load existing state
     current_state["workspace"] = space_type.name
@@ -155,13 +161,13 @@ def sidebar():
     with st.sidebar:
         st.title("JarvisOne")
         
-        # Knowledge Space Selection
+        # Workspace Selection
         space_options = [
             ("Agnostic", SpaceType.AGNOSTIC),
-            ("Servier", SpaceType.SERVIER),
-            ("Personnel", SpaceType.PERSONAL),
+            ("Work", SpaceType.WORK),
+            ("Personal", SpaceType.PERSONAL),
+            ("Dev", SpaceType.DEV),
             ("Coaching", SpaceType.COACHING),
-            ("Développement", SpaceType.DEV)
         ]
         
         current_index = next(
@@ -171,7 +177,7 @@ def sidebar():
         )
         
         selected_space = st.selectbox(
-            "Espace de connaissances",
+            "Workspace",
             options=[name for name, _ in space_options],
             index=current_index,
             key="workspace_select"
@@ -179,9 +185,9 @@ def sidebar():
         
         # Cache Control
         cache_enabled = st.toggle(
-            "Activer le cache",
+            "Enable cache",
             value=st.session_state.cache_enabled,
-            help="Active ou désactive le cache des requêtes",
+            help="Enable or disable cache",
             key="cache_toggle"
         )
         
@@ -207,7 +213,7 @@ def sidebar():
             })
             st.rerun()
         
-        # Update knowledge space if changed
+        # Update Workspace if changed
         selected_space_type = next(space_type for name, space_type in space_options if name == selected_space)
         if selected_space_type != st.session_state.workspace:
             old_space = st.session_state.workspace
@@ -232,7 +238,7 @@ def sidebar():
                 st.session_state.interactions = []
             st.session_state.interactions.append({
                 'type': 'config_change',
-                'config_type': 'Espace de connaissances',
+                'config_type': 'Workspace',
                 'old_value': old_space.name,
                 'new_value': selected_space_type.name,
                 'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -241,32 +247,32 @@ def sidebar():
             # Force a complete rerun to reinitialize everything
             st.rerun()
 
-# Configuration du style pour utiliser toute la largeur
+# Configure style to use full width
 st.set_page_config( 
     page_title="JarvisOne",
     page_icon="💬",
     layout="wide"
 )
 
-# Charger et appliquer les styles CSS
+# Load and apply CSS styles
 st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
 
-# Initialiser la session state d'abord
+# Initialize session state first
 initialize_session_state()
 
-# Initialiser la session chat après l'initialisation du workspace
+# Initialize chat session after workspace initialization
 init_chat_session()
 
 if __name__ == "__main__":
-    # Créer deux colonnes principales avec ratio 2:1
+    # Create two main columns with ratio 2:1
     col_main, col_side = st.columns([3, 2])
     
-    # Colonne principale pour le chat (2/3)
+    # Main column for chat (2/3)
     with col_main:
         chat_tab, library_tab, apps_tab = st.tabs(["💬 Chat", "📚 Library", "🔧 Apps"])
         with chat_tab:
             st.markdown('<div id="chat-tab-content">', unsafe_allow_html=True)
-            display_chat()  # Votre fonction qui génère le contenu du chat
+            display_chat()  # Your function that generates chat content
             st.markdown('</div>', unsafe_allow_html=True)
         with library_tab:
             st.markdown("### Library")
@@ -274,7 +280,7 @@ if __name__ == "__main__":
         with apps_tab:
             display_apps()
 
-    # Colonne latérale pour les logs et les interactions (1/3)
+    # Side column for logs and interactions (1/3)
     with col_side:
         tab_interactions, tab_logs, tab_params = st.tabs([
             "⚡ Interactions", 
@@ -292,8 +298,8 @@ if __name__ == "__main__":
             from ui.parameters import display_parameters
             display_parameters()
             
-    # Compter les erreurs en arrière-plan
+    # Count errors in the background
     logs = get_logs()
     error_count = sum(1 for log in logs if log['level'] in ['ERROR', 'CRITICAL'])
     if error_count > 0:
-        st.sidebar.error(f"{error_count} erreur(s) détectée(s). Consultez les logs pour plus de détails.")
+        st.sidebar.error(f"{error_count} error(s) detected. Check logs for more details.")

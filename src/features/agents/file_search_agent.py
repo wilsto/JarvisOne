@@ -11,7 +11,7 @@ import random
 import uuid
 import shlex
 
-# Configuration du logger
+# Configure logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -46,8 +46,8 @@ def query_in_context(query: str) -> str:
     Returns:
         str: Query with context paths added
     """
-    if 'knowledge_manager' in st.session_state:
-        paths = st.session_state.knowledge_manager.get_space_paths()
+    if 'workspace_manager' in st.session_state:
+        paths = st.session_state.workspace_manager.get_space_paths()
         if paths:
             # Format paths for Everything search
             path_query = ' '.join([f'path:"{str(path).replace("/", "\\")}"' for path in paths])
@@ -94,14 +94,14 @@ def execute_search(query: str) -> List[str]:
         return []
 
 def handle_search_interaction(transformed_query: str, results: List[str]) -> str:
-    """Gère l'affichage des résultats de recherche dans l'interface.
+    """Handle the display of search results in the interface.
     
     Args:
-        transformed_query: La requête transformée par l'agent
-        results: Liste des résultats de recherche
+        transformed_query: The query transformed by the agent
+        results: List of search results
         
     Returns:
-        str: L'ID de l'interaction créée
+        str: The ID of the created interaction
     """
     if "interactions" not in st.session_state:
         st.session_state.interactions = []
@@ -112,7 +112,7 @@ def handle_search_interaction(transformed_query: str, results: List[str]) -> str
     st.session_state.interactions.append({
         'id': interaction_id,
         'type': 'file_search',
-        'query': transformed_query,  # Utiliser la requête transformée
+        'query': transformed_query,  # Use the transformed query
         'results': results,
         'timestamp': datetime.now().strftime("%H:%M:%S")
     })
@@ -123,20 +123,20 @@ def format_result(results: List[str], transformed_query: str, interaction_id: st
     """Format search results into a response message.
     
     Args:
-        results: Liste des résultats de recherche
-        transformed_query: La requête transformée par l'agent
-        interaction_id: ID de l'interaction pour le lien
+        results: List of search results
+        transformed_query: The query transformed by the agent
+        interaction_id: Interaction ID for the link
         
     Returns:
-        str: Message de réponse formaté
+        str: Formatted response message
     """
 
     transformed_query = query_in_context(transformed_query)
     nb_results = len(results)
     if nb_results == 0:
-        return "Je n'ai trouvé aucun fichier correspondant à votre recherche."
+        return "No files found matching your search."
     else:
-        return f"J'ai trouvé {nb_results} fichiers qui correspondent à votre recherche (`{transformed_query}`). Vous pouvez les consulter dans l'[onglet Interactions](#{interaction_id})"
+        return f"I found {nb_results} files matching your search (`{transformed_query}`). You can view them in the [Interactions tab](#{interaction_id})"
 
 everything_docs = get_everything_docs()
 
@@ -177,6 +177,6 @@ agent = CoreAgent(
 
 
 if __name__ == '__main__':
-    query = "cherche des fichier pdf avec le mot clé test"
+    query = "search for pdf files with keyword test"
     response = agent.run(query)
     print(response['content'])

@@ -44,6 +44,7 @@ JarvisOne is a modular, scalable, conversational AI assistant.
   * **Actions buttons are to be placed in the interaction area, never in the main chat**.
 * **Redirect to Chat**: If no external interface available, redirect output to the chat interface.
 * **Agent Selection**: The `AgentOrchestrator` selects the appropriate agent based on user queries.
+* **Language**: **The UI and UX should be implemented in English.**
 
 ## Unit Testing Principles
 

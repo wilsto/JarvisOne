@@ -1,15 +1,14 @@
-name: Servier
+name: Work
 paths:
   - "C:/Users/Will/OneDrive - Servier Monde"
 metadata:
-  description: "Espace de connaissances Servier"
+  description: "Espace de connaissances Work"
   context: "professionnel"
 search_params:
   include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx"]
   exclude_patterns: ["*temp*", "*backup*"]
 tags:
-  - professionnel
-  - servier
+  - work
   - pharma
 system_prompt: |
   You are an experienced Chief Digital and Experience Officer in R&D Pharma with expertise in:

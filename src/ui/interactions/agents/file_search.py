@@ -41,7 +41,7 @@ class FileSearchDisplay(BaseInteractionDisplay):
         # Afficher le nombre de résultats restants
         if remaining_count > 0:
             st.markdown(
-                f"<div class='remaining-count'>+ {remaining_count} autres fichiers trouvés</div>",
+                f"<div class='remaining-count'>+ {remaining_count} more files found</div>",
                 unsafe_allow_html=True
             )
         

@@ -7,11 +7,11 @@ class QueryAnalyzerDisplay(BaseInteractionDisplay):
     """Display handler for query analyzer interactions."""
     
     def get_expander_title(self, interaction: Dict[str, Any]) -> str:
-        return f"🤔 Analyse : {interaction['analysis']['agent_selected']} • {interaction['timestamp']}"
+        return f"🤔 Analysis: {interaction['analysis']['agent_selected']} • {interaction['timestamp']}"
     
     def display(self, interaction: Dict[str, Any]) -> None:
-        st.markdown(f"**Requête analysée :** {interaction['query']}")
+        st.markdown(f"**Analyzed Query:** {interaction['query']}")
         
         if 'analysis' in interaction and interaction['analysis']:
-            st.markdown("**Résultat de l'analyse :**")
+            st.markdown("**Analysis Results:**")
             st.json(interaction['analysis'])

@@ -63,7 +63,7 @@ class ChatProcessor:
         """
         # Handle None case
         if response is None:
-            error_msg = "❌ Pas de réponse de l'agent"
+            error_msg = "❌ No response from agent"
             logger.warning("Agent returned None response")
             return error_msg
             

@@ -1,7 +1,8 @@
-trouve moi les fichiers word modifiés cette semaine
-trouve les fichiers markdown modifiés aujourd'hui
+find word files modified this week
+find markdown files modified today
 
-combien de roues a une voiture ?
+how many wheels does a car have?
 
 
-je viens d'écrire plein de code , tu un dev relecteur aggeuri en python , regarde la logique et les appels de tous les fichiers de src\features et fais moi un résumé
+
+I just wrote a lot of code, you're an experienced Python code reviewer, look at the logic and function calls in all files in src\features and give me a summary

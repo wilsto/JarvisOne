@@ -191,7 +191,7 @@ def test_handle_search_interaction_existing_session(mock_session_state):
 def test_format_result_empty():
     """Test result formatting with no results."""
     message = format_result([], "ext:py")
-    assert "aucun fichier" in message
+    assert "no files" in message.lower()
 
 def test_format_result_with_files():
     """Test result formatting with files found."""
@@ -204,7 +204,7 @@ def test_format_result_with_files():
     # Format message with an interaction ID
     message = message_formatter("test-id-123")
     
-    assert "2 fichiers" in message
+    assert "2 files" in message.lower()
     assert "ext:py" in message
     assert "#test-id-123" in message
 

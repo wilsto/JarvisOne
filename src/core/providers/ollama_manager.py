@@ -29,11 +29,11 @@ Note:
 import subprocess
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)
 
-def get_installed_models() -> List[Dict]:
+def get_installed_models() -> List[Dict[str, Any]]:
     """Get list of installed Ollama models.
     
     This function executes the 'ollama list' command and parses its output to get
@@ -58,7 +58,7 @@ def get_installed_models() -> List[Dict]:
         #     {
         #         "name": "mistral:latest",
         #         "size": "4.1GB",
-        #         "description": "Modèle local Ollama",
+        #         "description": "Local Ollama model",
         #         "context_length": 8192,
         #         "local": True
         #     }
@@ -88,7 +88,7 @@ def get_installed_models() -> List[Dict]:
                     models.append({
                         "name": name,
                         "size": size,
-                        "description": "Modèle local Ollama",
+                        "description": "Local Ollama model",
                         "context_length": 8192,  # Default context length
                         "local": True
                     })
@@ -131,7 +131,7 @@ def update_ollama_config(config: Dict) -> Dict:
         #         "models": {
         #             "mistral:latest": {
         #                 "name": "mistral:latest",
-        #                 "description": "Modèle local Ollama",
+        #                 "description": "Local Ollama model",
         #                 "context_length": 8192,
         #                 "local": True,
         #                 "size": "4.1GB"

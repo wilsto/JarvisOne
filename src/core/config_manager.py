@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 class ConfigManager:
-    """Gestionnaire de configuration pour les clés API."""
+    """Configuration manager for API keys."""
     
     CONFIG_FILE = "config/llm_preferences.json"
     
@@ -25,7 +25,7 @@ class ConfigManager:
         
     @classmethod
     def save_llm_preferences(cls, provider: str, model: str) -> None:
-        """Sauvegarde les préférences LLM."""
+        """Save LLM preferences."""
         cls._ensure_config_dir()
         
         try:
@@ -37,21 +37,21 @@ class ConfigManager:
             with open(cls.CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(preferences, f, indent=2)
                 
-            logger.info(f"Préférences LLM sauvegardées: {preferences}")
+            logger.info(f"LLM preferences saved: {preferences}")
         except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde des préférences LLM: {e}")
+            logger.error(f"Error saving LLM preferences: {e}")
             
     @classmethod
     def load_llm_preferences(cls) -> Dict[str, str]:
-        """Charge les préférences LLM."""
+        """Load LLM preferences."""
         try:
             if os.path.exists(cls.CONFIG_FILE):
                 with open(cls.CONFIG_FILE, "r", encoding="utf-8") as f:
                     preferences = json.load(f)
-                logger.info(f"Préférences LLM chargées: {preferences}")
+                logger.info(f"LLM preferences loaded: {preferences}")
                 return preferences
         except Exception as e:
-            logger.error(f"Erreur lors du chargement des préférences LLM: {e}")
+            logger.error(f"Error loading LLM preferences: {e}")
             
         # Default preferences
         return {
@@ -61,7 +61,7 @@ class ConfigManager:
         
     @staticmethod
     def get_api_key(provider: str) -> Optional[str]:
-        """Récupère la clé API pour un provider donné."""
+        """Get API key for a given provider."""
         key_mapping = {
             "OpenAI": "OPENAI_API_KEY",
             "Anthropic": "ANTHROPIC_API_KEY",
@@ -69,17 +69,17 @@ class ConfigManager:
         }
         
         if provider not in key_mapping:
-            logger.warning(f"Provider {provider} non reconnu")
+            logger.warning(f"Provider {provider} not recognized")
             return None
             
         key = os.getenv(key_mapping[provider])
         if not key:
-            logger.warning(f"Clé API non trouvée pour {provider}")
+            logger.warning(f"No API key found for {provider}")
         return key
         
     @staticmethod
     def get_org_id(provider: str) -> Optional[str]:
-        """Récupère l'ID d'organisation pour un provider donné."""
+        """Get organization ID for a given provider."""
         org_mapping = {
             "OpenAI": "OPENAI_ORG_ID",
             "Anthropic": "ANTHROPIC_ORG_ID"
@@ -88,21 +88,24 @@ class ConfigManager:
         if provider not in org_mapping:
             return None
             
-        return os.getenv(org_mapping[provider])
+        org_id = os.getenv(org_mapping[provider])
+        if not org_id:
+            logger.debug(f"No organization ID found for {provider}")
+        return org_id
         
-    @staticmethod
-    def get_all_configs() -> Dict[str, Dict[str, Optional[str]]]:
-        """Récupère toutes les configurations."""
+    @classmethod
+    def get_all_configs(cls) -> Dict[str, Dict[str, Optional[str]]]:
+        """Get all configurations."""
         return {
             "OpenAI": {
-                "api_key": ConfigManager.get_api_key("OpenAI"),
-                "org_id": ConfigManager.get_org_id("OpenAI")
+                "api_key": cls.get_api_key("OpenAI"),
+                "org_id": cls.get_org_id("OpenAI")
             },
             "Anthropic": {
-                "api_key": ConfigManager.get_api_key("Anthropic"),
-                "org_id": ConfigManager.get_org_id("Anthropic")
+                "api_key": cls.get_api_key("Anthropic"),
+                "org_id": cls.get_org_id("Anthropic")
             },
             "Google": {
-                "api_key": ConfigManager.get_api_key("Google")
+                "api_key": cls.get_api_key("Google")
             }
         }

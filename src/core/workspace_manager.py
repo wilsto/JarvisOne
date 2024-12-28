@@ -8,10 +8,10 @@ from .prompts.generic_prompts import build_system_prompt
 
 class SpaceType(Enum):
     """Enumeration of available workspaces."""
-    SERVIER = auto()
     PERSONAL = auto()
     COACHING = auto()
     DEV = auto()
+    WORK = auto()
     AGNOSTIC = auto()
 
 @dataclass

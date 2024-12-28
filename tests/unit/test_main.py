@@ -66,21 +66,18 @@ def mock_get_logs():
         ]
         yield mock
 
-def test_get_search_title_with_extension():
-    """Test search title generation with file extension."""
-    assert get_search_title("trouve des fichiers ext:py") == "Fichiers PY"
-    assert get_search_title("ext:pdf dans documents") == "Fichiers PDF"
-
-def test_get_search_title_with_date():
-    """Test search title generation with date modifier."""
-    assert get_search_title("dm:today fichiers modifiés") == "Fichiers récents"
-    assert get_search_title("trouve dm:yesterday") == "Fichiers récents"
-
-def test_get_search_title_generic():
-    """Test search title generation with generic query."""
-    assert get_search_title("trouve des documents importants") == "Trouve Documents Importants"
-    # Ignore les articles
-    assert get_search_title("le fichier important du projet") == "Fichier Important Projet"
+def test_get_search_title():
+    """Test search title generation."""
+    # Test extension search
+    assert get_search_title("find files ext:py") == "Files PY"
+    assert get_search_title("ext:pdf in documents") == "Files PDF"
+    
+    # Test date search
+    assert get_search_title("dm:today modified files") == "Recent files"
+    assert get_search_title("find dm:yesterday") == "Recent files"
+    
+    # Test regular search
+    assert get_search_title("important project file") == "Important Project File"
 
 def test_display_logs_without_filters(mock_streamlit, mock_get_logs):
     """Test logs display without filters."""
@@ -118,13 +115,12 @@ def test_display_logs_with_search(mock_streamlit, mock_get_logs):
     assert len(matching_calls) > 0
 
 def test_display_interactions_empty(mock_streamlit, mock_session_state):
-    """Test interactions display with no interactions."""
-    display_interactions()
-    
-    # Verify empty state message
-    mock_streamlit['info'].assert_called_once_with(
-        "Aucune interaction pour le moment. Les résultats de vos recherches apparaîtront ici."
-    )
+    """Test displaying interactions when there are none."""
+    with patch("streamlit.info") as mock_info:
+        display_interactions()
+        mock_info.assert_called_once_with(
+            "No interactions yet. Search results will appear here."
+        )
 
 def test_display_interactions_with_data(mock_streamlit, mock_session_state):
     """Test interactions display with data."""

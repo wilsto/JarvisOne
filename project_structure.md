@@ -40,9 +40,9 @@ This document describes the purpose of each directory and file within the Jarvis
 
     - **Purpose**: Manages personal workspace configuration for individual tasks and content.
 
-    ##### `servier_config.yaml`
+    ##### `work_config.yaml`
 
-    - **Purpose**: Specifies workspace settings for Servier-related activities and documentation.
+    - **Purpose**: Specifies workspace settings for work-related activities and documentation.
 
   Each workspace configuration includes:
   - Dedicated paths and search locations
