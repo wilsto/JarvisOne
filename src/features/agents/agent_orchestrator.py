@@ -6,7 +6,7 @@ import streamlit as st
 from core.core_agent import CoreAgent
 from core.config_manager import ConfigManager
 from core.llm_manager import get_llm_model
-from .query_analyzer_agent import analyze_query_tool, agent as query_analyzer_agent
+from .query_analyzer_agent import agent as query_analyzer_agent
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -52,8 +52,8 @@ class AgentOrchestrator:
     def _select_agent(self, user_query: str) -> CoreAgent:
         """Selects the appropriate agent based on user query."""
         try:
-            # Pass shared LLM instance to analyzer
-            agent_name = analyze_query_tool(user_query, self.llm)
+            # Use query analyzer agent
+            agent_name = self.query_analyzer.analyze_query(user_query)
             logger.info(f"Query analyzer identified agent: {agent_name}")
             
             # Normalize agent name by removing _agent suffix if present

@@ -35,82 +35,75 @@ For chat_agent:
 Return ONLY 'file_search_agent', 'feynman_agent', or 'chat_agent' based on the query.
 """
 
-def analyze_query_tool(query: str, llm: LLM) -> str:
-    """
-    Query analysis tool to determine the appropriate agent.
+class QueryAnalyzerAgent(CoreAgent):
+    """Agent responsible for analyzing queries and determining which agent should handle them."""
     
-    Args:
-        query: The user's query.
-        llm: Shared LLM instance to use.
+    def __init__(self):
+        super().__init__(
+            agent_name="Query Analyzer Agent",
+            system_instructions=AGENT_SELECTION_PROMPT,
+            interactions=self.handle_query_interaction
+        )
+    
+    def analyze_query(self, query: str) -> str:
+        """
+        Analyze query to determine appropriate agent.
         
-    Returns:
-        The name of the agent to use.
-    """
-    # Use shared LLM for analysis
-    prompt = AGENT_SELECTION_PROMPT + f"\n\nQuery: {query}\n\n"
-    response = llm.generate_response(prompt).lower().strip()
-    logger.info(f"Query: '{query}' → Agent selected: '{response}'")
-    
-    # Create analysis
-    analysis = {
-        'agent_selected': response,
-        'reason': 'File search' if response == 'file_search_agent' else 'General question'
-    }
-    
-    # Create interaction
-    handle_query_interaction(query, analysis)
-    
-    # Check if response is a valid agent
-    if response in ['file_search_agent', 'chat_agent']:
-        return response
-    
-    # Default to chat agent
-    logger.warning(f"Unrecognized agent '{response}', defaulting to chat_agent")
-    return "chat_agent"
-
-def handle_query_interaction(transformed_query: str, analysis: dict) -> str:
-    """Handle the display of query analysis in the interface.
-    
-    Args:
-        transformed_query: The analyzed query
-        analysis: The analysis result
+        Args:
+            query: The user's query
+            
+        Returns:
+            str: Name of the agent to handle the query
+        """
+        response = self.llm.generate_response(f"{self.system_instructions}\n\nQuery: {query}\n\n").lower().strip()
+        logger.info(f"Query: '{query}' → Agent selected: '{response}'")
         
-    Returns:
-        str: The ID of the created interaction
-    """
-    if "interactions" not in st.session_state:
-        st.session_state.interactions = []
-    
-    interaction_id = str(uuid.uuid4())
-    st.session_state.interactions.append({
-        'id': interaction_id,
-        'type': 'query_analyzer',
-        'query': transformed_query,
-        'analysis': analysis,
-        'timestamp': datetime.now().strftime("%H:%M:%S")
-    })
-    
-    return interaction_id
+        # Create analysis for UI
+        analysis = {
+            'agent_selected': response,
+            'reason': 'File search' if response == 'file_search_agent' else 'General question'
+        }
+        
+        # Create interaction
+        self.interactions(query, analysis)
+        
+        # Return appropriate agent name
+        if response in ['file_search_agent', 'chat_agent', 'feynman_agent']:
+            return response
+            
+        logger.warning(f"Unrecognized agent '{response}', defaulting to chat_agent")
+        return "chat_agent"
 
-# Create query analyzer agent instance
-agent = CoreAgent(
-    agent_name="Query Analyzer Agent",
-    system_instructions=[
-        "You are a query analyzer that helps understand user intentions.",
-        "Analyze the query and identify key components.",
-        "",
-        "CRITICAL OUTPUT FORMAT RULES:",
-        "1. Output ONLY the raw analysis as JSON",
-        "2. NO explanations or comments",
-        "3. NO line breaks or extra spaces",
-    ],
-    output_formatter=None,  # No special formatter needed
-    interactions=handle_query_interaction
-)
+    def handle_query_interaction(self, transformed_query: str, analysis: dict) -> str:
+        """Handle the display of query analysis in the interface.
+        
+        Args:
+            transformed_query: The analyzed query
+            analysis: The analysis result
+        
+        Returns:
+            str: The ID of the created interaction
+        """
+        if "interactions" not in st.session_state:
+            st.session_state.interactions = []
+        
+        interaction_id = str(uuid.uuid4())
+        st.session_state.interactions.append({
+            'id': interaction_id,
+            'type': 'query_analyzer',
+            'query': transformed_query,
+            'analysis': analysis,
+            'timestamp': datetime.now().strftime("%H:%M:%S")
+        })
+        
+        return interaction_id
+
+# Create singleton instance
+agent = QueryAnalyzerAgent()
 
 if __name__ == '__main__':
     from core.llm_manager import get_llm_model
-    llm = get_llm_model()
+    agent.llm = get_llm_model()
     query = "find a pdf file"
-    response = analyze_query_tool(query, llm)
+    response = agent.analyze_query(query)
     print(f"Selected agent: {response}")
