@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import Column, String, DateTime, Float, ForeignKey, create_engine, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from core.knowledge_space import SpaceType
+from core.workspace_manager import SpaceType
 
 Base = declarative_base()
 

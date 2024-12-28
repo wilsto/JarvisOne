@@ -95,14 +95,22 @@ def retry_on_error(max_retries: int = 3, delay: float = 1.0):
         return wrapper
     return decorator
 
-# Default parameters for LLM providers
+# Default parameters
 DEFAULT_PARAMS = {
+    'provider': 'Ollama (Local)',
+    'model': 'mistral:latest',
     'temperature': 0.7,
     'max_tokens': 2000,
     'presence_penalty': 0.1,
     'frequency_penalty': 0.1,
     'min_tokens': 50,
-    'max_context': 8192
+    'max_context': 8192,
+    'default_models': {
+        'OpenAI': 'gpt-4-mini',
+        'Anthropic': 'claude-2',
+        'Google': 'gemini-pro',
+        'Ollama (Local)': 'mistral:latest'
+    }
 }
 
 # API Keys from environment

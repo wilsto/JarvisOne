@@ -2,7 +2,7 @@
 
 from .llm_base import LLM
 from .llm_manager import get_llm_model
-from core.knowledge_space import KnowledgeSpaceManager
+from core.workspace_manager import WorkspaceManager
 import logging
 from typing import List
 from pathlib import Path
@@ -26,7 +26,7 @@ class CoreAgent:
     def __init__(self, agent_name: str, system_instructions: str, 
                  tools: list = None, output_formatter: callable = None,
                  interactions: callable = None,
-                 llm: LLM = None, knowledge_manager: KnowledgeSpaceManager = None):
+                 llm: LLM = None, workspace_manager: WorkspaceManager = None):
         """
         Initialise un CoreAgent.
 
@@ -37,7 +37,7 @@ class CoreAgent:
             output_formatter: Fonction optionnelle pour formater la sortie.
             interactions: Fonction optionnelle pour gérer les interactions UI.
             llm : instance du LLM utilisé par l'agent
-            knowledge_manager: instance du gestionnaire d'espace de connaissance
+            workspace_manager: instance du gestionnaire d'espace de travail
         """
         self.agent_name = agent_name
         self.system_instructions = system_instructions
@@ -45,13 +45,26 @@ class CoreAgent:
         self.output_formatter = output_formatter
         self.interactions = interactions
         self.llm = llm if llm else ManagedLLM()
-        self.knowledge_manager = knowledge_manager
+        self.workspace_manager = workspace_manager
 
     def _build_prompt(self, user_query: str) -> str:
-        """
-        Construit le prompt pour le LLM.
-        """
-        return f"{self.system_instructions}\n\nUser Query: {user_query}"
+        """Construit le prompt pour le LLM."""
+        prompt_parts = []
+        
+        # Ajouter le system prompt du workspace s'il existe
+        if self.workspace_manager:
+            workspace_prompt = self.workspace_manager.get_current_space_prompt()
+            if workspace_prompt:
+                prompt_parts.append(workspace_prompt)
+        
+        # Ajouter les instructions système de l'agent
+        prompt_parts.append(self.system_instructions)
+        
+        # Ajouter la requête utilisateur
+        prompt_parts.append(f"User Query: {user_query}")
+        
+        # Combiner tous les éléments avec des sauts de ligne
+        return "\n\n".join(prompt_parts)
 
     def _handle_interaction(self, query: str, results: any) -> str:
         """
@@ -69,24 +82,24 @@ class CoreAgent:
         return None
 
     def get_context(self) -> dict:
-        """Get the current context including knowledge space information."""
+        """Get the current context including workspace information."""
         context = {}
-        if self.knowledge_manager:
-            space_config = self.knowledge_manager.get_current_space_config()
-            if space_config:
+        if self.workspace_manager:
+            workspace_config = self.workspace_manager.get_current_space_config()
+            if workspace_config:
                 context.update({
-                    "knowledge_space": {
-                        "name": space_config.name,
-                        "context": space_config.metadata.get("context"),
-                        "tags": space_config.tags
+                    "workspace": {
+                        "name": workspace_config.name,
+                        "context": workspace_config.metadata.get("context"),
+                        "tags": workspace_config.tags
                     }
                 })
         return context
 
     def get_search_paths(self) -> List[Path]:
-        """Get the current search paths based on active knowledge space."""
-        if self.knowledge_manager:
-            return self.knowledge_manager.get_space_paths()
+        """Get the current search paths based on active workspace."""
+        if self.workspace_manager:
+            return self.workspace_manager.get_space_paths()
         return []
 
     def run(self, user_query: str) -> dict:

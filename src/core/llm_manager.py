@@ -10,6 +10,8 @@ from google.generativeai import GenerativeModel
 import google.generativeai as genai
 from .llm_base import LLM
 from .config_manager import ConfigManager
+from .workspace_manager import WorkspaceManager
+from pathlib import Path
 from .llm_utils import (
     llm_cache, retry_on_error, API_KEYS,
     DEFAULT_PARAMS, OLLAMA_DEFAULT_MODELS
@@ -43,6 +45,7 @@ def update_llm_preferences():
 
 class OpenAILLM(LLM):
     def __init__(self, model: str):
+        super().__init__()
         self.model = model
         if not API_KEYS['openai']:
             raise ValueError("OpenAI API key not found in environment")
@@ -56,10 +59,15 @@ class OpenAILLM(LLM):
             return cached
             
         try:
+            messages = []
+            if self.system_prompt:
+                messages.append({"role": "system", "content": self.system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
             # Create a streaming completion
             stream = self.client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 temperature=DEFAULT_PARAMS['temperature'],
                 max_tokens=DEFAULT_PARAMS['max_tokens'],
                 presence_penalty=DEFAULT_PARAMS['presence_penalty'],
@@ -85,6 +93,7 @@ class OpenAILLM(LLM):
 
 class AnthropicLLM(LLM):
     def __init__(self, model: str):
+        super().__init__()
         self.model = model
         if not API_KEYS['anthropic']:
             raise ValueError("Anthropic API key not found in environment")
@@ -98,11 +107,16 @@ class AnthropicLLM(LLM):
             return cached
             
         try:
+            if self.system_prompt:
+                full_prompt = f"\n\nSystem: {self.system_prompt}\n\nHuman: {prompt}\n\nAssistant:"
+            else:
+                full_prompt = f"\n\nHuman: {prompt}\n\nAssistant:"
+
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=DEFAULT_PARAMS['max_tokens'],
                 temperature=DEFAULT_PARAMS['temperature'],
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": full_prompt}]
             )
             
             result = response.content[0].text
@@ -117,6 +131,7 @@ class AnthropicLLM(LLM):
 
 class GeminiLLM(LLM):
     def __init__(self, model: str):
+        super().__init__()
         self.model = model
         if not API_KEYS['google']:
             raise ValueError("Google API key not found in environment")
@@ -131,8 +146,13 @@ class GeminiLLM(LLM):
             return cached
             
         try:
+            if self.system_prompt:
+                full_prompt = f"System: {self.system_prompt}\n\nUser: {prompt}"
+            else:
+                full_prompt = prompt
+
             response = self.client.generate_content(
-                prompt,
+                full_prompt,
                 generation_config={
                     "temperature": DEFAULT_PARAMS['temperature'],
                     "max_output_tokens": DEFAULT_PARAMS['max_tokens'],
@@ -151,6 +171,7 @@ class GeminiLLM(LLM):
 
 class OllamaLLM(LLM):
     def __init__(self, model: str):
+        super().__init__()
         self.model = model
         self.base_url = "http://localhost:11434/api"
         
@@ -162,18 +183,20 @@ class OllamaLLM(LLM):
             return cached
             
         try:
-            response = requests.post(
-                f"{self.base_url}/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": DEFAULT_PARAMS['temperature'],
-                        "num_predict": DEFAULT_PARAMS['max_tokens'],
-                    }
+            template = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": DEFAULT_PARAMS['temperature'],
+                    "num_predict": DEFAULT_PARAMS['max_tokens'],
                 }
-            )
+            }
+            
+            if self.system_prompt:
+                template["system"] = self.system_prompt
+
+            response = requests.post(f"{self.base_url}/generate", json=template)
             response.raise_for_status()
             
             result = response.json()["response"]
@@ -187,43 +210,56 @@ class OllamaLLM(LLM):
             raise
 
 def get_llm_model() -> LLM:
-    """Get the appropriate LLM model based on configuration."""
-    try:
-        # Utiliser les préférences du session state
-        if "llm_provider" in st.session_state and "llm_model" in st.session_state:
-            provider = st.session_state.llm_provider
-            model = st.session_state.llm_model
-            logger.info(f"Using LLM from session state: {provider}/{model}")
+    """
+    Récupère une instance du modèle LLM configuré.
+    """
+    # Get provider and model from session state
+    if not hasattr(st.session_state, 'llm_provider') or not st.session_state.llm_provider:
+        # Load preferences
+        preferences = ConfigManager.load_llm_preferences()
+        if preferences:
+            logger.info(f"Loaded LLM preferences: {preferences}")
+            # Update session state with loaded preferences
+            st.session_state.llm_provider = preferences["provider"]
+            st.session_state.llm_model = preferences["model"]
         else:
-            # Charger depuis le fichier si pas dans le session state
-            preferences = ConfigManager.load_llm_preferences()
-            if preferences and "provider" in preferences:
-                provider = preferences["provider"]
-                model = preferences["model"]
-                logger.info(f"Using LLM from preferences file: {provider}/{model}")
-            else:
-                # Utiliser les valeurs par défaut
-                provider = "Ollama (Local)"
-                model = "mistral:latest"
-                logger.info(f"Using default LLM: {provider}/{model}")
-        
-        return _initialize_model(provider, model)
-        
-    except Exception as e:
-        logger.error(f"Error getting LLM model: {str(e)}")
-        # Fallback to Ollama
-        logger.info("Falling back to Ollama/mistral")
-        return _initialize_model("Ollama (Local)", "mistral:latest")
-
-def _initialize_model(provider: str, model: str) -> LLM:
-    """Initialize a specific LLM model."""
-    if provider == "OpenAI":
-        return OpenAILLM(model or "gpt-4o-mini")
-    elif provider == "Anthropic":
-        return AnthropicLLM(model or "claude-2")
-    elif provider == "Google":
-        return GeminiLLM(model or "gemini-pro")
-    elif provider == "Ollama (Local)":
-        return OllamaLLM(model or "mistral:latest")
+            # Use default provider and model
+            provider = DEFAULT_PARAMS['provider']
+            model = DEFAULT_PARAMS['model']
+            st.session_state.llm_provider = provider
+            st.session_state.llm_model = model
+            logger.info(f"Using default LLM: {provider}/{model}")
+    
+    # Get workspace system prompt if available
+    if hasattr(st.session_state, 'workspace_manager'):
+        workspace_manager = st.session_state.workspace_manager
+        system_prompt = workspace_manager.get_current_space_prompt()
     else:
-        raise ValueError(f"Unknown provider: {provider}")
+        workspace_manager = WorkspaceManager(Path("config"))
+        system_prompt = workspace_manager.get_current_space_prompt()
+    
+    # Initialize the model
+    provider = st.session_state.llm_provider
+    model = st.session_state.llm_model
+    
+    try:
+        if provider == "OpenAI":
+            llm = OpenAILLM(model or DEFAULT_PARAMS['default_models']['OpenAI'])
+        elif provider == "Anthropic":
+            llm = AnthropicLLM(model or DEFAULT_PARAMS['default_models']['Anthropic'])
+        elif provider == "Google":
+            llm = GeminiLLM(model or DEFAULT_PARAMS['default_models']['Google'])
+        elif provider == "Ollama (Local)":
+            llm = OllamaLLM(model or DEFAULT_PARAMS['default_models']['Ollama (Local)'])
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
+        
+        # Set the system prompt if available
+        if system_prompt:
+            llm.system_prompt = system_prompt
+        
+        return llm
+    except Exception as e:
+        logger.error(f"Error initializing {provider} LLM: {e}")
+        # Fallback to a default model
+        return OllamaLLM(OLLAMA_DEFAULT_MODELS[0])

@@ -130,9 +130,14 @@ class ChatProcessor:
         try:
             # Create conversation if this is the first interaction
             if st.session_state.current_conversation_id is None:
-                conversation = self.repository.create_conversation()
+                # Extract initial title from first message
+                initial_title = self.analyzer.extract_title([{"role": "user", "content": user_input}])
+                workspace = getattr(st.session_state, 'pending_workspace', st.session_state.workspace)
+                conversation = self.repository.create_conversation(title=initial_title, workspace=workspace)
                 st.session_state.current_conversation_id = conversation.id
-                logger.info(f"Created new conversation {conversation.id} on first interaction")
+                if hasattr(st.session_state, 'pending_workspace'):
+                    delattr(st.session_state, 'pending_workspace')
+                logger.info(f"Created new conversation {conversation.id} with title '{initial_title}' in workspace {workspace}")
             
             # Combine history with input
             combined_input = self._combine_history_with_input(user_input)
@@ -163,11 +168,9 @@ class ChatProcessor:
     def new_conversation(self, workspace=None):
         """Start a new conversation."""
         st.session_state.messages = []
-        if workspace is None:
-            workspace = st.session_state.knowledge_space
-        conversation = self.repository.create_conversation(workspace=workspace)
-        st.session_state.current_conversation_id = conversation.id
-        logger.info(f"Created new conversation {conversation.id} in workspace {workspace}")
+        st.session_state.current_conversation_id = None
+        st.session_state.pending_workspace = workspace if workspace is not None else st.session_state.workspace
+        logger.info(f"Prepared new conversation in workspace {workspace}")
 
     def get_recent_conversations(self, workspace=None, limit: int = 10):
         """Get recent conversations for display in sidebar."""
@@ -208,16 +211,36 @@ class ChatProcessor:
         # Add to session state
         st.session_state.messages.append({"role": role, "content": content})
         
-        # Persist to database
-        self.repository.add_message(
-            st.session_state.current_conversation_id,
-            role=role,
-            content=content
-        )
+        # Create conversation only for user messages if none exists
+        if role == "user" and (not hasattr(st.session_state, 'current_conversation_id') or st.session_state.current_conversation_id is None):
+            # Create new conversation
+            initial_title = self.analyzer.extract_title([{"role": role, "content": content}])
+            workspace = getattr(st.session_state, 'pending_workspace', st.session_state.workspace)
+            conversation = self.repository.create_conversation(title=initial_title, workspace=workspace)
+            st.session_state.current_conversation_id = conversation.id
+            if hasattr(st.session_state, 'pending_workspace'):
+                delattr(st.session_state, 'pending_workspace')
+            logger.info(f"Created new conversation {conversation.id} with title '{initial_title}' in workspace {workspace}")
+            
+            # Now add all previous messages to the conversation
+            for msg in st.session_state.messages[:-1]:  # All messages except the current one
+                self.repository.add_message(
+                    conversation.id,
+                    role=msg["role"],
+                    content=msg["content"]
+                )
         
-        # Update metadata periodically (every 5 messages)
-        if len(st.session_state.messages) % 5 == 0:
-            self._update_conversation_metadata()
+        # Persist current message to database if we have a conversation
+        if hasattr(st.session_state, 'current_conversation_id') and st.session_state.current_conversation_id:
+            self.repository.add_message(
+                st.session_state.current_conversation_id,
+                role=role,
+                content=content
+            )
+            
+            # Update metadata periodically (every 5 messages)
+            if len(st.session_state.messages) % 5 == 0:
+                self._update_conversation_metadata()
 
     def get_messages(self):
         """Get all messages in the current conversation."""

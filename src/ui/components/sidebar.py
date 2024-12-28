@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import yaml
-from core.knowledge_space import SpaceType
+from core.workspace_manager import SpaceType
 from .conversation_history import render_conversation_history
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def render_sidebar():
         
         current_index = next(
             (i for i, (_, space_type) in enumerate(space_options) 
-             if space_type == st.session_state.knowledge_space), 
+             if space_type == st.session_state.workspace), 
             0
         )
         
@@ -36,17 +36,17 @@ def render_sidebar():
             "Espace de connaissances",
             options=[name for name, _ in space_options],
             index=current_index,
-            key="knowledge_space_select"
+            key="workspace_select"
         )
         
         # Update knowledge space if changed
         selected_space_type = next(space_type for name, space_type in space_options if name == selected_space)
-        if selected_space_type != st.session_state.knowledge_space:
-            old_space = st.session_state.knowledge_space
-            st.session_state.knowledge_space = selected_space_type
+        if selected_space_type != st.session_state.workspace:
+            old_space = st.session_state.workspace
+            st.session_state.workspace = selected_space_type
             
-            # Update knowledge manager
-            st.session_state.knowledge_manager.set_current_space(selected_space_type)
+            # Update workspace manager
+            st.session_state.workspace_manager.set_current_space(selected_space_type)
             
             # Create new conversation in new workspace if chat processor exists
             if "chat_processor" in st.session_state:
@@ -59,7 +59,7 @@ def render_sidebar():
                 with open(config_file, 'r', encoding='utf-8') as f:
                     current_state = yaml.safe_load(f)
             
-            current_state["knowledge_space"] = selected_space_type.name
+            current_state["workspace"] = selected_space_type.name
             
             with open(config_file, 'w', encoding='utf-8') as f:
                 yaml.dump(current_state, f)
@@ -72,7 +72,7 @@ def render_sidebar():
         # Render conversation history if chat processor is available
         if "chat_processor" in st.session_state:
             chat_processor = st.session_state.chat_processor
-            current_space = st.session_state.knowledge_space
+            current_space = st.session_state.workspace
             conversations = chat_processor.get_recent_conversations(workspace=current_space)
             
             def on_conversation_selected(conversation_id):

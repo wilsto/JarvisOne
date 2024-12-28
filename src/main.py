@@ -3,7 +3,7 @@ from utils.logging_config import setup_logging, get_logs
 from ui.chat_ui import display_chat, init_chat_session
 from ui.interactions import InteractionDisplayFactory
 from ui.styles import get_all_styles
-from core.knowledge_space import KnowledgeSpaceManager, SpaceType
+from core.workspace_manager import WorkspaceManager, SpaceType
 from pathlib import Path
 from core.core_agent import CoreAgent
 from core.database.db_cleaner import clean_database
@@ -33,7 +33,7 @@ def load_app_state() -> dict:
     """Charge l'état de l'application depuis le fichier de configuration."""
     config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
     default_state = {
-        "knowledge_space": "AGNOSTIC",
+        "workspace": "AGNOSTIC",
         "cache_enabled": True
     }
     if config_file.exists():
@@ -46,24 +46,24 @@ def save_app_state(space_type: SpaceType):
     """Sauvegarde l'état de l'application."""
     config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
     current_state = load_app_state()  # Load existing state
-    current_state["knowledge_space"] = space_type.name
+    current_state["workspace"] = space_type.name
     with open(config_file, 'w', encoding='utf-8') as f:
         yaml.dump(current_state, f)
 
 def initialize_session_state():
-    if 'knowledge_space' not in st.session_state:
+    if 'workspace' not in st.session_state:
         # Charger le dernier espace utilisé
         app_state = load_app_state()
-        st.session_state.knowledge_space = SpaceType[app_state["knowledge_space"]]
+        st.session_state.workspace = SpaceType[app_state["workspace"]]
         st.session_state.cache_enabled = app_state["cache_enabled"]
     
-    if 'knowledge_manager' not in st.session_state:
+    if 'workspace_manager' not in st.session_state:
         config_dir = Path(__file__).parent.parent / "config"
-        st.session_state.knowledge_manager = KnowledgeSpaceManager(config_dir)
-        st.session_state.knowledge_manager.set_current_space(st.session_state.knowledge_space)
+        st.session_state.workspace_manager = WorkspaceManager(config_dir)
+        st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
     else:
-        # Synchroniser l'espace actuel avec le knowledge manager
-        st.session_state.knowledge_manager.set_current_space(st.session_state.knowledge_space)
+        # Synchroniser l'espace actuel avec le workspace manager
+        st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
     
 def get_search_title(query: str) -> str:
     """Génère un titre court et explicite pour la recherche."""
@@ -155,7 +155,7 @@ def create_agent(agent_type: str) -> CoreAgent:
     agent = CoreAgent(
         agent_name=agent_type,
         system_instructions=f"You are a {agent_type} agent.",  # Instructions simples pour le moment
-        knowledge_manager=st.session_state.knowledge_manager
+        workspace_manager=st.session_state.workspace_manager
     )
     return agent
 
@@ -175,7 +175,7 @@ def sidebar():
         
         current_index = next(
             (i for i, (_, space_type) in enumerate(space_options) 
-             if space_type == st.session_state.knowledge_space), 
+             if space_type == st.session_state.workspace), 
             0
         )
         
@@ -183,7 +183,7 @@ def sidebar():
             "Espace de connaissances",
             options=[name for name, _ in space_options],
             index=current_index,
-            key="knowledge_space_select"
+            key="workspace_select"
         )
         
         # Cache Control
@@ -218,9 +218,9 @@ def sidebar():
         
         # Update knowledge space if changed
         selected_space_type = next(space_type for name, space_type in space_options if name == selected_space)
-        if selected_space_type != st.session_state.knowledge_space:
-            old_space = st.session_state.knowledge_space
-            st.session_state.knowledge_space = selected_space_type
+        if selected_space_type != st.session_state.workspace:
+            old_space = st.session_state.workspace
+            st.session_state.workspace = selected_space_type
             save_app_state(selected_space_type)
             
             # Log the configuration change
@@ -245,7 +245,9 @@ if __name__ == "__main__":
     with col_main:
         chat_tab, library_tab, apps_tab = st.tabs(["💬 Chat", "📚 Library", "🔧 Apps"])
         with chat_tab:
-            display_chat()
+            st.markdown('<div id="chat-tab-content">', unsafe_allow_html=True)
+            display_chat()  # Votre fonction qui génère le contenu du chat
+            st.markdown('</div>', unsafe_allow_html=True)
         with library_tab:
             st.markdown("### Library")
             st.info("Library features coming soon!")

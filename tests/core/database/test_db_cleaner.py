@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.core.database.models import Base, Conversation, Message, ConversationTopic
 from src.core.database.db_cleaner import clean_database
-from src.core.knowledge_space import SpaceType
+from src.core.workspace_manager import SpaceType
 
 @pytest.fixture
 def engine():

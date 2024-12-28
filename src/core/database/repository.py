@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from .models import Base, Conversation, Message, ConversationTopic
-from core.knowledge_space import SpaceType
+from core.workspace_manager import SpaceType
 
 logger = logging.getLogger(__name__)
 

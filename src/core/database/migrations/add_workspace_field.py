@@ -10,7 +10,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from sqlalchemy import create_engine, text
-from src.core.knowledge_space import SpaceType
+from src.core.workspace_manager import SpaceType
 
 logger = logging.getLogger(__name__)
 

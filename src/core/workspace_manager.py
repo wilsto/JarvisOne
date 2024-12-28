@@ -1,4 +1,4 @@
-"""Knowledge Space Manager for JarvisOne."""
+"""Workspace Manager for JarvisOne."""
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import yaml
 
 class SpaceType(Enum):
-    """Enumeration of available knowledge spaces."""
+    """Enumeration of available workspaces."""
     SERVIER = auto()
     PERSONAL = auto()
     COACHING = auto()
@@ -15,15 +15,16 @@ class SpaceType(Enum):
 
 @dataclass
 class SpaceConfig:
-    """Configuration for a knowledge space."""
+    """Configuration for a workspace."""
     name: str
     paths: List[Path]
     metadata: Dict
     search_params: Dict
     tags: List[str]
+    system_prompt: Optional[str] = None
 
-class KnowledgeSpaceManager:
-    """Manages different knowledge spaces and their configurations."""
+class WorkspaceManager:
+    """Manages different workspaces and their configurations."""
     
     def __init__(self, config_dir: Path):
         self.config_dir = config_dir
@@ -42,7 +43,8 @@ class KnowledgeSpaceManager:
                     paths=[],
                     metadata={},
                     search_params={},
-                    tags=[]
+                    tags=[],
+                    system_prompt=None
                 )
                 continue
             config_file = spaces_dir / f"{space_type.name.lower()}_config.yaml"
@@ -54,11 +56,12 @@ class KnowledgeSpaceManager:
                         paths=[Path(p) for p in config_data['paths']],
                         metadata=config_data.get('metadata', {}),
                         search_params=config_data.get('search_params', {}),
-                        tags=config_data.get('tags', [])
+                        tags=config_data.get('tags', []),
+                        system_prompt=config_data.get('system_prompt', None)
                     )
 
     def set_current_space(self, space_type: SpaceType) -> None:
-        """Set the current active knowledge space."""
+        """Set the current active workspace."""
         if space_type not in self.spaces:
             raise ValueError(f"Space {space_type} not configured")
         self.current_space = space_type
@@ -69,8 +72,17 @@ class KnowledgeSpaceManager:
             return self.spaces[self.current_space]
         return None
 
+    def get_current_space_prompt(self) -> Optional[str]:
+        """Get the system prompt for the current space."""
+        if self.current_space and self.current_space in self.spaces:
+            return self.spaces[self.current_space].system_prompt
+        return None
+
     def get_space_paths(self) -> List[Path]:
         """Get the paths for the current space."""
         if self.current_space and self.current_space in self.spaces:
             return self.spaces[self.current_space].paths
         return []
+
+# For backward compatibility
+KnowledgeSpaceManager = WorkspaceManager

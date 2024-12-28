@@ -77,23 +77,6 @@ def display_chat():
     
     # Render the sidebar
     render_sidebar()
-    
-    # Add CSS to position chat at bottom
-    st.markdown("""
-        <style>
-        [data-testid="stChatInput"] {
-            position: fixed;
-            bottom: 0;
-            background: white;
-            max-width: calc(100% - 300px); /* Adjust for sidebar */
-            padding: 1rem;
-            z-index: 1000;
-        }
-        .stChatMessage {
-            margin-bottom: 1rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
     # Display chat messages
     for message in chat_processor.get_messages():

@@ -1,16 +1,28 @@
 # JarvisOne
 
+## Project Structure and Analysis
+
+### MOST IMPORTANT RULES
+
+- START ALWAYS by reading `project_structure.md` to understand the application structure and modularity purpose BEFORE any analysis.
+- A thorough analysis is MANDATORY before attempting to implement any new code.
+- Acknowledged explicitly each time these 2 previous rules.
+- Ask questions to the author if any doubt or clarification needs to be made about purposes not technical questions.
+
 ## Project Context
 
 JarvisOne is a modular and scalable conversational AI assistant.
 
-- Uses multiple LLM models (Gemini 2.0, ChatGPT-4, Ollama) for increased flexibility 
+- Uses multiple LLM models (Gemini 2.0, ChatGPT-4, Ollama) for increased flexibility
 - Integrates RAG (Retrieval-Augmented Generation) capabilities for enhanced contextualization (À conserver pour plus tard)
 - Designed with a modular architecture allowing easy addition of new features
 - Includes document management capabilities and user-friendly interface
 - **Core interface is a chat, allowing natural language interaction**
-- **Uses `everything` for file search functionality, leveraging its interface for output when appropriate.**
 - **Implements a layered architecture inspired by the provided diagram, ensuring modularity and security.**
+
+- Ensure that the proposed changes align with the existing architecture and follow the established patterns.
+- Consider the impact on other modules and potential dependencies when suggesting modifications.
+- Verify that new implementations adhere to the SOLID principles and coding guidelines outlined in the project documentation.
 
 ## Tech Stack
 
@@ -66,19 +78,9 @@ JarvisOne is a modular and scalable conversational AI assistant.
 - Test both success and error scenarios
 - Include edge cases and boundary conditions
 
-### Test Modification Flag
-- Add comment `#TODO: TEST_UPDATE_NEEDED` when code changes require test updates
-- Document which test cases need to be added/modified
-- Never modify tests without explicit USER approval
-
-### Best Practices
-- Use pytest fixtures for test setup
-- Keep tests independent and idempotent
-- Mock external dependencies and API calls
-- Use parameterized tests for multiple scenarios
-- Follow Arrange-Act-Assert pattern
-
 ## Objectifs, Dépendances et Contraintes (ODC)
 
 - Les ODC techniques sont documentées dans le fichier `odc_technique.md`.
 - Les ODC d'architecture sont documentées dans le fichier `odc_architecture.md`.
+
+

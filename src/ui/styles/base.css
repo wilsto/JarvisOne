@@ -47,6 +47,20 @@
     font-weight: bold;
 }
 
+
+/* Ajuste la position du champ de texte */
+[data-testid="stChatInput"] {
+    position: fixed;
+    bottom: 0;
+    background: white;
+    max-width: calc(100% - 300px); /* Adjust for sidebar */
+    padding: 1rem;
+    z-index: 1000;
+}
+.stChatMessage {
+    margin-bottom: 1rem;
+}
+
 /* Headers des sections */
 .section-header {
     font-size: 1.5rem;
