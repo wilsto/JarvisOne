@@ -51,7 +51,13 @@ class OpenAILLM(LLM):
         self.model = model
         if not API_KEYS['openai']:
             raise ValueError("OpenAI API key not found in environment")
-        self.client = OpenAI(api_key=API_KEYS['openai'])
+        # Load timeout settings from config
+        config = ConfigManager._load_config()
+        timeout = config.get('llm', {}).get('timeout', {}).get('read', 300)
+        self.client = OpenAI(
+            api_key=API_KEYS['openai'],
+            timeout=timeout
+        )
         
     @retry_on_error()
     def generate_response(self, prompt: str) -> str:
@@ -89,6 +95,9 @@ class OpenAILLM(LLM):
             llm_cache.set(prompt, self.model, full_response)
             return full_response
             
+        except TimeoutError:
+            logger.error(f"Timeout error while calling OpenAI API: Timeout={self.client.timeout}s")
+            raise TimeoutError("Request to OpenAI API timed out. Please try again.")
         except Exception as e:
             logger.error(f"OpenAI API error: {str(e)}")
             raise
@@ -99,7 +108,13 @@ class AnthropicLLM(LLM):
         self.model = model
         if not API_KEYS['anthropic']:
             raise ValueError("Anthropic API key not found in environment")
-        self.client = anthropic.Client(api_key=API_KEYS['anthropic'])
+        # Load timeout settings from config
+        config = ConfigManager._load_config()
+        timeout = config.get('llm', {}).get('timeout', {}).get('read', 300)
+        self.client = anthropic.Client(
+            api_key=API_KEYS['anthropic'],
+            timeout=timeout
+        )
         
     @retry_on_error()
     def generate_response(self, prompt: str) -> str:
@@ -127,6 +142,9 @@ class AnthropicLLM(LLM):
             llm_cache.set(prompt, self.model, result)
             return result
             
+        except TimeoutError:
+            logger.error(f"Timeout error while calling Anthropic API: Timeout={self.client.timeout}s")
+            raise TimeoutError("Request to Anthropic API timed out. Please try again.")
         except Exception as e:
             logger.error(f"Anthropic API error: {str(e)}")
             raise
@@ -137,7 +155,13 @@ class GeminiLLM(LLM):
         self.model = model
         if not API_KEYS['google']:
             raise ValueError("Google API key not found in environment")
-        genai.configure(api_key=API_KEYS['google'])
+        # Load timeout settings from config
+        config = ConfigManager._load_config()
+        self.timeout = config.get('llm', {}).get('timeout', {}).get('read', 300)
+        genai.configure(
+            api_key=API_KEYS['google'],
+            timeout=self.timeout
+        )
         self.client = GenerativeModel(model)
         
     @retry_on_error()
@@ -167,6 +191,9 @@ class GeminiLLM(LLM):
             llm_cache.set(prompt, self.model, result)
             return result
             
+        except TimeoutError:
+            logger.error(f"Timeout error while calling Google API: Timeout={self.timeout}s")
+            raise TimeoutError("Request to Google API timed out. Please try again.")
         except Exception as e:
             logger.error(f"Google API error: {str(e)}")
             raise
@@ -176,6 +203,12 @@ class OllamaLLM(LLM):
         super().__init__()
         self.model = model
         self.base_url = "http://localhost:11434/api"
+        # Load timeout settings from config
+        config = ConfigManager._load_config()
+        self.timeout = (
+            config.get('llm', {}).get('timeout', {}).get('connect', 10),  # Connect timeout
+            config.get('llm', {}).get('timeout', {}).get('read', 300)     # Read timeout
+        )
         
     @retry_on_error()
     def generate_response(self, prompt: str) -> str:
@@ -198,7 +231,11 @@ class OllamaLLM(LLM):
             if self.system_prompt:
                 template["system"] = self.system_prompt
 
-            response = requests.post(f"{self.base_url}/generate", json=template)
+            response = requests.post(
+                f"{self.base_url}/generate", 
+                json=template,
+                timeout=self.timeout
+            )
             response.raise_for_status()
             
             result = response.json()["response"]
@@ -207,8 +244,11 @@ class OllamaLLM(LLM):
             llm_cache.set(prompt, self.model, result)
             return result
             
-        except Exception as e:
-            logger.error(f"Ollama API error: {str(e)}")
+        except requests.Timeout:
+            logger.error(f"Timeout error while calling Ollama API: Connection timeout={self.timeout[0]}s, Read timeout={self.timeout[1]}s")
+            raise TimeoutError("Request to Ollama API timed out. Please try again or check if the server is responsive.")
+        except requests.RequestException as e:
+            logger.error(f"Ollama API request error: {str(e)}")
             raise
 
 def get_llm_model() -> LLM:
