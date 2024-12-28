@@ -58,9 +58,19 @@ def clean_database(session: Session) -> dict:
         'untitled_conversations_removed': 0,
         'empty_conversations_removed': 0,
         'orphaned_topics_removed': 0,
-        'duplicate_topics_removed': 0
+        'duplicate_topics_removed': 0,
+        'invalid_workspace_fixed': 0
     }
     
+    # 0. Fix invalid workspace values
+    result = session.execute(text("""
+        UPDATE conversations 
+        SET workspace = 'AGNOSTIC' 
+        WHERE workspace NOT IN ('PERSONAL', 'COACHING', 'DEV', 'WORK', 'AGNOSTIC')
+    """))
+    stats['invalid_workspace_fixed'] = result.rowcount
+    session.commit()
+
     # 1. Clean messages with NULL conversation_id
     result = session.execute(text("DELETE FROM messages WHERE conversation_id IS NULL"))
     stats['null_conversation_messages_removed'] = result.rowcount
@@ -115,5 +125,40 @@ def clean_database(session: Session) -> dict:
     # Log cleaning stats to external file
     log_file = log_cleaning_stats(stats)
     print(f"Cleaning log written to: {log_file}")
+    
+    return stats
+
+def reset_database(session: Session) -> dict:
+    """
+    Reset the database by removing all conversations and messages.
+    This is a dangerous operation that cannot be undone.
+    
+    Returns:
+        dict: Statistics about the reset operation
+    """
+    stats = {
+        'conversations_removed': 0,
+        'messages_removed': 0,
+        'topics_removed': 0
+    }
+    
+    # Delete all topics first (due to foreign key constraints)
+    result = session.execute(text("DELETE FROM conversation_topics"))
+    stats['topics_removed'] = result.rowcount
+    session.commit()
+    
+    # Delete all messages
+    result = session.execute(text("DELETE FROM messages"))
+    stats['messages_removed'] = result.rowcount
+    session.commit()
+    
+    # Delete all conversations
+    result = session.execute(text("DELETE FROM conversations"))
+    stats['conversations_removed'] = result.rowcount
+    session.commit()
+    
+    # Log reset stats to external file
+    log_file = log_cleaning_stats(stats)
+    print(f"Reset log written to: {log_file}")
     
     return stats

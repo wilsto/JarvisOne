@@ -5,7 +5,7 @@
 JarvisOne is a modular, scalable, conversational AI assistant.
 
 * **LLMs**: Uses Gemini 2.0, ChatGPT-4, Ollama, and Anthropic for flexibility.
-* **Workspaces**: Supports multiple workspaces (e.g., `coaching`, `dev`, `personal`, `servier`), each with its own specific configuration and system prompt.
+* **Workspaces**: Supports multiple workspaces (e.g., `coaching`, `dev`, `personal`, `work`), each with its own specific configuration and system prompt.
 * **RAG**: (Future) Enhanced contextualization using Retrieval-Augmented Generation.
 * **Modular Design**: Designed for flexible and independent development; each component must have clear responsibilities.
 * **Document Management**: Integrated document handling.
@@ -66,6 +66,6 @@ JarvisOne is a modular, scalable, conversational AI assistant.
 
 ## Workspace Configuration
 
-* **Workspace-Specific Settings**: Each workspace (e.g., `coaching`, `dev`, `personal`, `servier`) has its own configuration file (e.g., `coaching_config.yaml`) located in the `config/spaces/` directory.
+* **Workspace-Specific Settings**: Each workspace (e.g., `coaching`, `dev`, `personal`, `work`) has its own configuration file (e.g., `coaching_config.yaml`) located in the `config/spaces/` directory.
 * **Configuration Includes**: Path, File types, System prompt, and specific settings.
 * **System Prompt**: **The system prompt is the primary mechanism for defining the AI agent's role, behavior, and expertise within each workspace.**

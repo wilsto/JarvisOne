@@ -1,7 +1,7 @@
 app_state:
   cache_enabled: false
   notification_enabled: true
-  workspace: DEV
+  workspace: PERSONAL
 llm:
   default_model: mistral:latest
   default_provider: Ollama (Local)
