@@ -82,7 +82,7 @@ class AgentOrchestrator:
             agent = self._select_agent(user_query)
             logger.info(f"Selected agent: {agent.agent_name}")
             response = agent.run(user_query)
-            logger.info(f"Response from agent '{agent.agent_name}': {response}")
+            #logger.info(f"Response from agent '{agent.agent_name}': {response}")
             return response
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}", exc_info=True)
