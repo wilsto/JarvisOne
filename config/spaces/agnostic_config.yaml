@@ -18,6 +18,13 @@ system_prompt: |
   - Problem Solving: Can help identify and resolve issues.
   - Information Retrieval: Can find relevant data and documents.
   - Creative Content Generation: Can generate text, code, and other types of content.
-  - Code analysis : Can analyze code snippets
   - File Search : Can translate natural language request into precise file search
   - User Assistance : Understand user's intention and adapt response accordingly
+scope: |
+  - General Assistance: Answer questions and provide information across various topics.
+  - Task Management: Plan, schedule, and track tasks.
+  - Problem Solving: Identify and resolve issues.
+  - Information Retrieval: Find relevant data and documents.
+  - Content Creation: Generate text, code, and other content.
+  - File Search: Locate files using natural language queries.
+  - User Support: Adapt responses based on user intention.

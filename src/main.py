@@ -16,19 +16,6 @@ from datetime import datetime
 # Configurer le logging en premier
 setup_logging()
 
-# Configuration du style pour utiliser toute la largeur
-st.set_page_config( 
-    page_title="JarvisOne",
-    page_icon="💬",
-    layout="wide"
-)
-
-# Charger et appliquer les styles CSS
-st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
-
-# Initialiser la session si nécessaire
-init_chat_session()
-
 def load_app_state() -> dict:
     """Charge l'état de l'application depuis le fichier de configuration."""
     config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
@@ -42,29 +29,25 @@ def load_app_state() -> dict:
             return {**default_state, **loaded_state}  # Merge with defaults
     return default_state
 
-def save_app_state(space_type: SpaceType):
-    """Sauvegarde l'état de l'application."""
-    config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
-    current_state = load_app_state()  # Load existing state
-    current_state["workspace"] = space_type.name
-    with open(config_file, 'w', encoding='utf-8') as f:
-        yaml.dump(current_state, f)
-
 def initialize_session_state():
     if 'workspace' not in st.session_state:
         # Charger le dernier espace utilisé
         app_state = load_app_state()
         st.session_state.workspace = SpaceType[app_state["workspace"]]
         st.session_state.cache_enabled = app_state["cache_enabled"]
+        print(f"Initialized workspace to: {st.session_state.workspace}")  # Debug
     
     if 'workspace_manager' not in st.session_state:
         config_dir = Path(__file__).parent.parent / "config"
         st.session_state.workspace_manager = WorkspaceManager(config_dir)
         st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
+        print("Created new workspace manager")  # Debug
+        print(f"Set current space to: {st.session_state.workspace}")  # Debug
     else:
         # Synchroniser l'espace actuel avec le workspace manager
         st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
-    
+        print(f"Synchronized workspace manager to: {st.session_state.workspace}")  # Debug
+
 def get_search_title(query: str) -> str:
     """Génère un titre court et explicite pour la recherche."""
     # Extraire les mots clés de la requête
@@ -159,6 +142,14 @@ def create_agent(agent_type: str) -> CoreAgent:
     )
     return agent
 
+def save_app_state(space_type: SpaceType):
+    """Sauvegarde l'état de l'application."""
+    config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
+    current_state = load_app_state()  # Load existing state
+    current_state["workspace"] = space_type.name
+    with open(config_file, 'w', encoding='utf-8') as f:
+        yaml.dump(current_state, f)
+
 def sidebar():
     """Render the sidebar."""
     with st.sidebar:
@@ -235,9 +226,23 @@ def sidebar():
             })
             st.rerun()
 
+# Configuration du style pour utiliser toute la largeur
+st.set_page_config( 
+    page_title="JarvisOne",
+    page_icon="💬",
+    layout="wide"
+)
+
+# Charger et appliquer les styles CSS
+st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
+
+# Initialiser la session state d'abord
+initialize_session_state()
+
+# Initialiser la session chat après l'initialisation du workspace
+init_chat_session()
+
 if __name__ == "__main__":
-    initialize_session_state()
-    
     # Créer deux colonnes principales avec ratio 2:1
     col_main, col_side = st.columns([3, 2])
     

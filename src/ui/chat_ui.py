@@ -5,6 +5,7 @@ from features.chat_processor import ChatProcessor
 from .components.sidebar import render_sidebar
 import uuid
 from datetime import datetime
+from core.prompts.generic_prompts import generate_welcome_message
 
 __all__ = ['display_chat', 'init_chat_session']
 
@@ -21,15 +22,28 @@ def init_chat_session():
     
     messages = chat_processor.get_messages()
     if not messages:  # Only add welcome message if no messages exist
-        welcome_message = (
-            "👋 Bonjour, je suis JarvisOne, votre assistant IA !\n\n"
-            "Je peux vous aider avec :\n"
-            "• La recherche de fichiers et de code\n"
-            "• L'analyse de code et le débogage\n"
-            "• La création et modification de fichiers\n"
-            "• L'exécution de commandes\n\n"
-            "Comment puis-je vous aider aujourd'hui ?"
-        )
+        # Get current workspace scope from workspace manager
+        workspace_manager = st.session_state.get('workspace_manager')
+        
+        if workspace_manager:
+            current_space_config = workspace_manager.get_current_space_config()
+            
+            if current_space_config and hasattr(current_space_config, 'metadata'):
+                scope = current_space_config.metadata.get('scope', '')
+                welcome_message = generate_welcome_message(scope)
+            else:
+                # Fallback welcome message if no scope defined
+                welcome_message = (
+                    "👋 Bonjour, je suis JarvisOne, votre assistant IA !\n\n"
+                    "Comment puis-je vous aider aujourd'hui ?"
+                )
+        else:
+            # Fallback welcome message if no workspace manager
+            welcome_message = (
+                "👋 Bonjour, je suis JarvisOne, votre assistant IA !\n\n"
+                "Comment puis-je vous aider aujourd'hui ?"
+            )
+        
         chat_processor.add_message("assistant", welcome_message)
 
 def render_chat_header(chat_processor):
