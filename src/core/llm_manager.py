@@ -24,17 +24,19 @@ def init_session_state():
     """Initialize session state with saved preferences."""
     if "llm_provider" not in st.session_state or "llm_model" not in st.session_state:
         preferences = ConfigManager.load_llm_preferences()
-        # Si pas de préférences ou préférences invalides, utiliser les valeurs par défaut
+        config = ConfigManager._load_config()
+        llm_config = config.get('llm', {})
+        
+        # Si pas de préférences ou préférences invalides, utiliser les valeurs de config
         if not preferences or "provider" not in preferences:
             preferences = {
-                "provider": "Ollama (Local)",
-                "model": "mistral:latest"
+                "provider": llm_config.get('default_provider', DEFAULT_PARAMS['provider']),
+                "model": llm_config.get('default_model', DEFAULT_PARAMS['model'])
             }
-            logger.info("Using default LLM configuration: Ollama (Local)/mistral:latest")
-        
+            
         st.session_state.llm_provider = preferences["provider"]
         st.session_state.llm_model = preferences["model"]
-        logger.info(f"Session state initialized with preferences: {preferences}")
+        logger.info(f"Session state initialized with LLM: {preferences['provider']}/{preferences['model']}")
 
 def update_llm_preferences():
     """Save current LLM preferences."""

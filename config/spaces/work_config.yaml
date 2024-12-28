@@ -1,15 +1,16 @@
 name: Work
 paths:
-  - "C:/Users/Will/OneDrive - Servier Monde"
+  - "${WORKSPACE_WORK_PATH}"
 metadata:
   description: "Espace de connaissances Work"
   context: "professionnel"
 search_params:
-  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx"]
-  exclude_patterns: ["*temp*", "*backup*"]
+  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx", ".pptx", ".md"]
+  exclude_patterns: ["*temp*", "*backup*", "*archive*"]
 tags:
   - work
   - pharma
+  - professional
 system_prompt: |
   You are an experienced Chief Digital and Experience Officer in R&D Pharma with expertise in:
   - Digital transformation strategy in pharmaceutical research and development

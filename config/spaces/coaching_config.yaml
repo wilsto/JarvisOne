@@ -1,16 +1,16 @@
 name: Coaching
 paths:
-  - "G:/Mon Drive/CoachbyWill"
+  - "${WORKSPACE_COACHING_PATH}"
 metadata:
-  description: "Espace coaching"
-  context: "professionnel"
+  description: "Coaching workspace"
+  context: "professional"
 search_params:
   include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx", ".pptx"]
   exclude_patterns: ["*temp*", "*backup*", "*archive*"]
 tags:
   - coaching
-  - formation
-  - professionnel
+  - training
+  - professional
 system_prompt: |
   You are an expert professional coach with experience in career development, leadership skills, and personal growth.
   Your role is to:

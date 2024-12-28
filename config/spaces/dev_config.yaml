@@ -1,16 +1,16 @@
-name: Développement
+name: Development
 paths:
-  - "C:/Users/Will/OneDrive/Dev"
+  - "${WORKSPACE_DEV_PATH}"
 metadata:
-  description: "Espace développement"
-  context: "technique"
+  description: "Development workspace"
+  context: "technical"
 search_params:
   include_extensions: [".py", ".js", ".html", ".css", ".md", ".json", ".yaml", ".yml"]
   exclude_patterns: ["*node_modules*", "*venv*", "*__pycache__*", "*.git*"]
 tags:
-  - développement
-  - code
-  - technique
+  - development
+  - coding
+  - technical
 system_prompt: |
   You are an expert software developer assistant AI. Your primary role is to assist the user in software development tasks.
   Your responsibilities include:

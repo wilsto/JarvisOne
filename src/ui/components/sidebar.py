@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import yaml
 from core.workspace_manager import SpaceType
+from core.config_manager import ConfigManager
 from .conversation_history import render_conversation_history
 
 logger = logging.getLogger(__name__)
@@ -52,17 +53,10 @@ def render_sidebar():
             if "chat_processor" in st.session_state:
                 st.session_state.chat_processor.new_conversation(workspace=selected_space_type)
             
-            # Update app state
-            config_file = Path(__file__).parent.parent.parent.parent / "config" / "app_state.yaml"
-            current_state = {}
-            if config_file.exists():
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    current_state = yaml.safe_load(f)
-            
-            current_state["workspace"] = selected_space_type.name
-            
-            with open(config_file, 'w', encoding='utf-8') as f:
-                yaml.dump(current_state, f)
+            # Update app state in config
+            config = ConfigManager._load_config()
+            config["app_state"]["workspace"] = selected_space_type.name
+            ConfigManager.save_config(config)
             
             logger.info(f"Switched Workspace from {old_space} to {selected_space_type}")
             

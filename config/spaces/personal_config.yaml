@@ -1,16 +1,16 @@
-name: Personnel
+name: Personal
 paths:
-  - "C:/Users/Will/OneDrive/Perso"
+  - "${WORKSPACE_PERSONAL_PATH}"
 metadata:
-  description: "Espace personnel"
-  context: "personnel"
+  description: "Personal workspace"
+  context: "personal"
 search_params:
-  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".xlsx", ".jpg", ".png"]
-  exclude_patterns: ["*temp*", "*backup*"]
+  include_extensions: [".doc", ".docx", ".pdf", ".txt", ".jpg", ".png", ".mp3", ".mp4"]
+  exclude_patterns: ["*temp*", "*backup*", "*archive*"]
 tags:
-  - personnel
-  - privé
+  - personal
   - documents
+  - media
 system_prompt: |
   You are a highly adaptable personal assistant AI, designed to help the user with a wide range of personal tasks.
   Your key responsibilities include:

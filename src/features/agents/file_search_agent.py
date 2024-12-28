@@ -1,15 +1,16 @@
-from core.core_agent import CoreAgent
-import subprocess
-import logging
+"""File search agent using Everything."""
+
 import os
+import subprocess
+import shlex
 from pathlib import Path
 import streamlit as st
-import pyperclip
 from typing import List
 from datetime import datetime
-import random
 import uuid
-import shlex
+import logging
+from core.config_manager import ConfigManager
+from core.core_agent import CoreAgent
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -64,11 +65,14 @@ def execute_search(query: str) -> List[str]:
     query = query_in_context(query)
     
     try:
-        # Path to Everything CLI executable
-        es_path = "C:\\Program Files\\Everything\\es.exe"
-        
+        # Get Everything CLI path from config
+        cli_path = ConfigManager.get_tool_config("everything", "cli_path")
+        if not cli_path or not os.path.exists(cli_path):
+            logger.error(f"Everything CLI not found at {cli_path}")
+            return []
+            
         # Use list of arguments instead of shell=True
-        cmd = [es_path]
+        cmd = [cli_path]
         cmd.extend(shlex.split(query))  # Safely split the query into arguments
         
         logger.info(f"Executing Everything search with command: {' '.join(cmd)}")

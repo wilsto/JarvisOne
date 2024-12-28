@@ -10,13 +10,14 @@ from pathlib import Path
 import hashlib
 from dotenv import load_dotenv
 import yaml
+from core.config_manager import ConfigManager
 
 # Load environment variables
 load_dotenv()
 
 # Load configuration
-with open('config/app_state.yaml', 'r') as f:
-    config = yaml.safe_load(f)
+config = ConfigManager._load_config()
+app_state = config.get("app_state", {})
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class LLMCache:
     
     def __init__(self, cache_dir: str = ".cache/llm"):
         self.cache_dir = Path(cache_dir)
-        self.cache_enabled = config.get('cache_enabled', True)
+        self.cache_enabled = app_state.get('cache_enabled', True)
         if self.cache_enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
         
@@ -97,20 +98,13 @@ def retry_on_error(max_retries: int = 3, delay: float = 1.0):
 
 # Default parameters
 DEFAULT_PARAMS = {
-    'provider': 'Ollama (Local)',
-    'model': 'mistral:latest',
+    'provider': config.get('llm', {}).get('default_provider', 'Ollama (Local)'),
+    'model': config.get('llm', {}).get('default_model', 'mistral:latest'),
     'temperature': 0.7,
     'max_tokens': 2000,
-    'presence_penalty': 0.1,
-    'frequency_penalty': 0.1,
-    'min_tokens': 50,
-    'max_context': 8192,
-    'default_models': {
-        'OpenAI': 'gpt-4-mini',
-        'Anthropic': 'claude-2',
-        'Google': 'gemini-pro',
-        'Ollama (Local)': 'mistral:latest'
-    }
+    'top_p': 0.95,
+    'frequency_penalty': 0.0,
+    'presence_penalty': 0.0,
 }
 
 # API Keys from environment
@@ -122,9 +116,7 @@ API_KEYS = {
 
 # Ollama default models
 OLLAMA_DEFAULT_MODELS = [
-    "mistral:latest",
-    "codellama:latest",
-    "llama2:latest"
+    "mistral:latest"
 ]
 
 # Initialize global cache

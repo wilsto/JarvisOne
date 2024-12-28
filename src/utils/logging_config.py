@@ -5,6 +5,7 @@ import sys
 import streamlit as st
 from typing import List
 from datetime import datetime
+from core.config_manager import ConfigManager
 
 class StreamlitHandler(logging.Handler):
     """Handler personnalisé pour stocker les logs dans st.session_state."""
@@ -42,36 +43,41 @@ class StreamlitHandler(logging.Handler):
             pass
 
 def setup_logging():
-    """Configure le logging pour l'application."""
-    # Créer le handler Streamlit
+    """Configure logging for the application."""
+    # Load logging configuration
+    config = ConfigManager._load_config()
+    log_level = config.get("logging", {}).get("level", "INFO")
+    log_level = getattr(logging, log_level.upper(), logging.INFO)
+    
+    # Create Streamlit handler
     streamlit_handler = StreamlitHandler()
     streamlit_handler.setFormatter(
         logging.Formatter('%(message)s')
     )
     
-    # Créer un handler pour la console
+    # Create console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(
         logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     )
     
-    # Configurer le root logger
+    # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(log_level)
     
-    # Supprimer les handlers existants
+    # Remove existing handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     
-    # Ajouter nos handlers au root logger uniquement
+    # Add our handlers to root logger only
     root_logger.addHandler(streamlit_handler)
     root_logger.addHandler(console_handler)
     
-    # Configurer les loggers existants pour utiliser le root logger
+    # Configure existing loggers to use root logger
     for name in logging.root.manager.loggerDict:
         logger = logging.getLogger(name)
-        logger.handlers = []  # Supprimer les handlers existants
-        logger.propagate = True  # Utiliser le root logger
+        logger.handlers = []  # Remove existing handlers
+        logger.propagate = True  # Use root logger
 
 def get_logs() -> List[dict]:
     """Récupère les logs stockés dans la session."""

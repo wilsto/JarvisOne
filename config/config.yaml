@@ -1,0 +1,19 @@
+app_state:
+  cache_enabled: false
+  notification_enabled: true
+  workspace: DEV
+llm:
+  model: gpt-4o-mini
+  provider: OpenAI
+  default_provider: "Ollama (Local)" 
+  default_model: "mistral:latest"
+
+logging:
+  level: INFO
+tools:
+  everything:
+    cli_path: C:\Program Files\Everything\es.exe
+    gui_path: C:\Program Files\Everything\Everything.exe
+ui:
+  theme: default
+

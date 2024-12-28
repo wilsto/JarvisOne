@@ -12,22 +12,18 @@ from sqlalchemy.orm import sessionmaker
 from ui.apps import display_apps
 import yaml
 from datetime import datetime
+from core.config_manager import ConfigManager  # Import ConfigManager
 
 # Configure logging first
 setup_logging()
 
 def load_app_state() -> dict:
     """Load application state from configuration file."""
-    config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
-    default_state = {
+    config = ConfigManager._load_config()
+    return config.get("app_state", {
         "workspace": "AGNOSTIC",
         "cache_enabled": True
-    }
-    if config_file.exists():
-        with open(config_file, 'r', encoding='utf-8') as f:
-            loaded_state = yaml.safe_load(f)
-            return {**default_state, **loaded_state}  # Merge with defaults
-    return default_state
+    })
 
 def initialize_session_state():
     """Initialize session state with default values if not already set."""
@@ -150,11 +146,12 @@ def create_agent(agent_type: str) -> CoreAgent:
 
 def save_app_state(space_type: SpaceType):
     """Save the application state."""
-    config_file = Path(__file__).parent.parent / "config" / "app_state.yaml"
-    current_state = load_app_state()  # Load existing state
-    current_state["workspace"] = space_type.name
-    with open(config_file, 'w', encoding='utf-8') as f:
-        yaml.dump(current_state, f)
+    config = ConfigManager._load_config()
+    config["app_state"] = {
+        "workspace": space_type.name,
+        "cache_enabled": st.session_state.cache_enabled
+    }
+    ConfigManager.save_config(config)
 
 def sidebar():
     """Render the sidebar."""
@@ -248,10 +245,20 @@ def sidebar():
             st.rerun()
 
 # Configure style to use full width
+config = ConfigManager._load_config()
+ui_config = config.get("ui", {})
+theme = ui_config.get("theme", "default")
+
 st.set_page_config( 
     page_title="JarvisOne",
     page_icon="💬",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/yourusername/JarvisOne',
+        'Report a bug': "https://github.com/yourusername/JarvisOne/issues",
+        'About': "# JarvisOne\nA modular, scalable, conversational AI assistant."
+    }
 )
 
 # Load and apply CSS styles

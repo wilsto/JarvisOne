@@ -54,14 +54,11 @@ def display_parameters():
         st.session_state.cache_enabled = cache_enabled
         
         # Update app state
-        config_file = Path(__file__).parent.parent.parent / "config" / "app_state.yaml"
-        with open(config_file, 'r', encoding='utf-8') as f:
-            current_state = yaml.safe_load(f)
+        config = ConfigManager._load_config()
+        config["app_state"]["cache_enabled"] = cache_enabled
+        ConfigManager.save_config(config)
         
-        current_state["cache_enabled"] = cache_enabled
-        
-        with open(config_file, 'w', encoding='utf-8') as f:
-            yaml.dump(current_state, f)
+        logger.info(f"Cache {'enabled' if cache_enabled else 'disabled'}")
         
         # Log the configuration change
         if 'interactions' not in st.session_state:

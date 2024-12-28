@@ -4,18 +4,57 @@ import os
 import pyperclip
 import logging
 import shlex
+import subprocess
 from typing import Dict, Any
 from ..base import BaseInteractionDisplay
+from core.config_manager import ConfigManager
 
-# Configuration du logger
+# Configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class FileSearchDisplay(BaseInteractionDisplay):
     """Display handler for file search interactions."""
     
     def get_expander_title(self, interaction: Dict[str, Any]) -> str:
         return f"🔍 {interaction['query']} • {interaction['timestamp']}"
+    
+    def _copy_path(self, path: str):
+        """Copy a path to clipboard."""
+        try:
+            pyperclip.copy(path)
+            st.toast(f"Copied to clipboard: {path}")
+        except Exception as e:
+            logger.error(f"Error copying to clipboard: {e}")
+            st.error("Failed to copy to clipboard")
+    
+    def _open_file(self, path: str):
+        """Open a file using the default application."""
+        try:
+            os.startfile(path)
+            st.toast(f"Opened: {path}")
+        except Exception as e:
+            logger.error(f"Error opening file: {e}")
+            st.error(f"Failed to open file: {path}")
+    
+    def _launch_everything_gui(self, search_term: str = ""):
+        """Launch Everything GUI with optional search term."""
+        try:
+            # Get Everything GUI path from config
+            gui_path = ConfigManager.get_tool_config("everything", "gui_path")
+            if not gui_path or not os.path.exists(gui_path):
+                logger.error(f"Everything GUI not found at {gui_path}")
+                st.error("Everything GUI not found")
+                return
+                
+            cmd = [gui_path]
+            if search_term:
+                cmd.extend(["-search", search_term])
+                
+            subprocess.Popen(cmd)
+            st.toast(f"Opened Everything with search: {search_term}")
+        except Exception as e:
+            logger.error(f"Error launching Everything GUI: {e}")
+            st.error("Failed to launch Everything")
     
     def display(self, interaction: Dict[str, Any]) -> None:
         # En-tête avec le nombre total de résultats et la requête
@@ -57,7 +96,7 @@ class FileSearchDisplay(BaseInteractionDisplay):
         file_name = os.path.basename(file_path)
         dir_path = os.path.dirname(file_path)
         
-        cols = st.columns([0.4, 5, 0.6])
+        cols = st.columns([0.4, 5, 0.6, 0.6])
         
         with cols[0]:
             st.markdown(f"<div style='margin: 0; color: #555;'>#{index}</div>", unsafe_allow_html=True)
@@ -73,33 +112,8 @@ class FileSearchDisplay(BaseInteractionDisplay):
         
         with cols[2]:
             if st.button("📋", key=f"copy_{interaction_id}_{index}", help="Copier le chemin"):
-                pyperclip.copy(file_path)
+                self._copy_path(file_path)
                 st.toast("Chemin copié !", icon="✅")
-
-    #TODO: améliorer la gestion des path avec everything.exe
-    def _launch_everything_gui(self, query: str) -> None:
-        """Launch Everything GUI with the given query."""
-        if not isinstance(query, str):
-            logger.warning("Invalid query type provided")
-            return
-            
-        logger.info("Launching Everything GUI with query: %s", query)
-        
-        # Split query and path components safely
-        query_parts = query.split('path:', 1)
-        search_query = query_parts[0].strip()
-        query_path = query_parts[1].strip() if len(query_parts) > 1 else ''
-        
-        # Combine query components safely
-        query4everything = f'{search_query} {query_path}'.strip()
-        logger.info("Query for Everything: %s", query4everything)
-        
-        try:
-            everything_path = r"C:\Program Files\Everything\Everything.exe"
-            cmd = [everything_path, "-search"]
-            cmd.extend(shlex.split(query4everything))
-            
-            subprocess.Popen(cmd)
-        except Exception as e:
-            logger.error("Failed to launch Everything GUI: %s", str(e))
-            st.error("Failed to launch Everything GUI. Please try again.")
+        with cols[3]:                
+            if st.button("📂", key=f"open_{interaction_id}_{index}", help="Ouvrir le fichier"):
+                self._open_file(file_path)

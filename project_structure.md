@@ -16,14 +16,6 @@ This document describes the purpose of each directory and file within the Jarvis
 
   - **Purpose**: Stores global application settings including API credentials, LLM configurations, and system parameters.
 
-  #### `config/app_state.yaml`
-
-  - **Purpose**: Maintains persistent application state and user preferences across sessions.
-
-  #### `config/llm_preferences.json`
-
-  - **Purpose**: Defines user-specific preferences for LLM interactions and response formatting.
-
   #### `config/spaces/`
 
   - **Purpose**: Contains workspace-specific configurations for different usage contexts.
