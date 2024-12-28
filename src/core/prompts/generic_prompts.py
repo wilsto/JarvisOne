@@ -16,6 +16,8 @@ GENERIC_RESPONSE_FORMAT = """
 - Use bold text to highlight key information.
 - Be clear and unambiguous.
 - Be mindful of your tone. Keep it professional, respectful, and helpful.
+- !Important! Respond in the same language as the user's query.
+- **UX**: Prioritize simplicity, consistency, and clarity in all outputs. Use emojis to enhance explanations.
 """
 
 GENERIC_UNCERTAINTY_RESPONSE = """
