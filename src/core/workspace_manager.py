@@ -4,6 +4,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Dict, List, Optional
 import yaml
+import os
 from .prompts.generic_prompts import build_system_prompt
 
 class SpaceType(Enum):
@@ -70,7 +71,7 @@ class WorkspaceManager:
                         
                     self.spaces[space_type] = SpaceConfig(
                         name=config_data['name'],
-                        paths=[Path(p) for p in config_data['paths']],
+                        paths=[Path(os.path.expandvars(p)) for p in config_data['paths']],
                         metadata=metadata,
                         search_params=config_data.get('search_params', {}),
                         tags=config_data.get('tags', []),
