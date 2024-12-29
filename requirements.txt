@@ -23,3 +23,9 @@ ollama>=0.1.0,<1.0.0
 # Tests
 pytest==7.4.3
 pytest-cov==4.1.0
+
+# RAG (Retrieval-Augmented Generation)
+langchain 
+langchain-community 
+sentence-transformers 
+chromadb
