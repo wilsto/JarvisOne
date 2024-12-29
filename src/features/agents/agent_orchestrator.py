@@ -29,6 +29,11 @@ class AgentOrchestrator:
         self.llm = get_llm_model()
         logger.info(f"Initialized shared LLM instance: {self.llm.__class__.__name__}")
         
+        # Get workspace manager from session state
+        self.workspace_manager = st.session_state.get('workspace_manager')
+        if not self.workspace_manager:
+            logger.warning("No workspace_manager in session_state, agents will have limited functionality")
+        
         self.query_analyzer = query_analyzer_agent
         self.available_agents = self._load_agents()
         logger.info(f"AgentOrchestrator initialized with agents: {list(self.available_agents.keys())}")
@@ -43,8 +48,9 @@ class AgentOrchestrator:
                 for item_name in module.__dict__.keys():
                      item = module.__dict__[item_name]
                      if isinstance(item, CoreAgent):
-                        # Pass shared LLM instance to agent
+                        # Pass shared LLM instance and workspace_manager to agent
                         item.llm = self.llm
+                        item.workspace_manager = self.workspace_manager
                         available_agents[name.replace("_agent", "")] = item
         
         return available_agents

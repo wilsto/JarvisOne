@@ -20,6 +20,16 @@ from .llm_utils import (
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
+# Load timeout settings from config at module level
+try:
+    config = ConfigManager._load_config()
+    DEFAULT_CONNECT_TIMEOUT = config.get('llm', {}).get('timeout', {}).get('connect', 10)
+    DEFAULT_READ_TIMEOUT = config.get('llm', {}).get('timeout', {}).get('read', 300)
+except Exception as e:
+    logger.warning(f"Failed to load config, using default timeouts: {e}")
+    DEFAULT_CONNECT_TIMEOUT = 10
+    DEFAULT_READ_TIMEOUT = 300
+
 def init_session_state():
     """Initialize session state with saved preferences."""
     if "llm_provider" not in st.session_state or "llm_model" not in st.session_state:
@@ -51,12 +61,9 @@ class OpenAILLM(LLM):
         self.model = model
         if not API_KEYS['openai']:
             raise ValueError("OpenAI API key not found in environment")
-        # Load timeout settings from config
-        config = ConfigManager._load_config()
-        timeout = config.get('llm', {}).get('timeout', {}).get('read', 300)
         self.client = OpenAI(
             api_key=API_KEYS['openai'],
-            timeout=timeout
+            timeout=DEFAULT_READ_TIMEOUT
         )
         
     @retry_on_error()
@@ -108,12 +115,9 @@ class AnthropicLLM(LLM):
         self.model = model
         if not API_KEYS['anthropic']:
             raise ValueError("Anthropic API key not found in environment")
-        # Load timeout settings from config
-        config = ConfigManager._load_config()
-        timeout = config.get('llm', {}).get('timeout', {}).get('read', 300)
         self.client = anthropic.Client(
             api_key=API_KEYS['anthropic'],
-            timeout=timeout
+            timeout=DEFAULT_READ_TIMEOUT
         )
         
     @retry_on_error()
@@ -155,9 +159,7 @@ class GeminiLLM(LLM):
         self.model = model
         if not API_KEYS['google']:
             raise ValueError("Google API key not found in environment")
-        # Load timeout settings from config
-        config = ConfigManager._load_config()
-        self.timeout = config.get('llm', {}).get('timeout', {}).get('read', 300)
+        self.timeout = DEFAULT_READ_TIMEOUT
         genai.configure(
             api_key=API_KEYS['google'],
             timeout=self.timeout
@@ -203,12 +205,7 @@ class OllamaLLM(LLM):
         super().__init__()
         self.model = model
         self.base_url = "http://localhost:11434/api"
-        # Load timeout settings from config
-        config = ConfigManager._load_config()
-        self.timeout = (
-            config.get('llm', {}).get('timeout', {}).get('connect', 10),  # Connect timeout
-            config.get('llm', {}).get('timeout', {}).get('read', 300)     # Read timeout
-        )
+        self.timeout = (DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT)
         
     @retry_on_error()
     def generate_response(self, prompt: str) -> str:
@@ -275,11 +272,10 @@ def get_llm_model() -> LLM:
     # Get workspace system prompt if available
     if hasattr(st.session_state, 'workspace_manager'):
         workspace_manager = st.session_state.workspace_manager
-        system_prompt = workspace_manager.get_current_space_prompt()
+        system_prompt = workspace_manager.get_current_context_prompt()
     else:
         workspace_manager = WorkspaceManager(Path("config"))
-        system_prompt = workspace_manager.get_current_space_prompt()
-    
+        system_prompt = workspace_manager.get_current_context_prompt() 
     # Initialize the model
     provider = st.session_state.llm_provider
     model = st.session_state.llm_model

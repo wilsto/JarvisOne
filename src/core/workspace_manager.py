@@ -1,11 +1,16 @@
 """Workspace Manager for JarvisOne."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import Dict, List, Optional
 import yaml
 import os
+import logging
 from .prompts.generic_prompts import build_system_prompt
+
+# Configuration du logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class SpaceType(Enum):
     """Enumeration of available workspaces."""
@@ -23,7 +28,8 @@ class SpaceConfig:
     metadata: Dict
     search_params: Dict
     tags: List[str]
-    system_prompt: Optional[str] = None
+    workspace_prompt: Optional[str] = None
+    roles: List[Dict] = field(default_factory=list)
 
 class WorkspaceManager:
     """Manages different workspaces and their configurations."""
@@ -32,6 +38,7 @@ class WorkspaceManager:
         self.config_dir = config_dir
         self.spaces: Dict[SpaceType, SpaceConfig] = {}
         self.current_space: Optional[SpaceType] = None
+        self.current_role: Optional[str] = None
         self._load_configurations()
 
     def _load_configurations(self) -> None:
@@ -56,7 +63,7 @@ class WorkspaceManager:
                     metadata=metadata,
                     search_params={},
                     tags=[],
-                    system_prompt=config_data.get('system_prompt', None) if 'config_data' in locals() else None
+                    workspace_prompt=config_data.get('workspace_prompt', None) if 'config_data' in locals() else None
                 )
                 continue
                 
@@ -75,7 +82,8 @@ class WorkspaceManager:
                         metadata=metadata,
                         search_params=config_data.get('search_params', {}),
                         tags=config_data.get('tags', []),
-                        system_prompt=config_data.get('system_prompt', None)
+                        workspace_prompt=config_data.get('workspace_prompt', None),
+                        roles=config_data.get('roles', [])
                     )
 
     def set_current_space(self, space_type: SpaceType) -> None:
@@ -90,22 +98,45 @@ class WorkspaceManager:
             return self.spaces[self.current_space]
         return None
 
-    def get_current_space_prompt(self) -> str:
-        """Get the system prompt for the current workspace."""
+    def get_current_context_prompt(self) -> str:
+        """Get the combined context prompt including workspace and role context."""
         if not self.current_space:
-            return None
-        
-        current_space_config = self.get_current_space_config()
-        if not current_space_config:
-            return None
+            return ""
             
-        # Get scope from metadata
-        scope = current_space_config.metadata.get('scope', '')
+        current_space_config = self.spaces.get(self.current_space)
+        if not current_space_config:
+            return ""
+            
+        # Get base context prompt and scope
+        context_prompt = current_space_config.workspace_prompt or ""
+        scope = current_space_config.metadata.get('scope', "")
         
-        # Get system prompt, defaulting to empty string if None
-        system_prompt = current_space_config.system_prompt or ""
+        # Add role-specific context if a role is selected
+        role = next((r for r in current_space_config.roles if r['name'] == self.current_role), None)
+        logger.info(f"Current role: {role}")
+        if role and 'prompt_context' in role:
+            context_prompt = f"{context_prompt}\n\nRole Context:\n{role['prompt_context']}"
         
-        return build_system_prompt(system_prompt, scope)
+        return build_system_prompt(context_prompt, scope)
+
+    def get_current_space_roles(self) -> List[Dict]:
+        """Get roles for the current workspace."""
+        if not self.current_space:
+            return []
+        current_space_config = self.spaces.get(self.current_space)
+        return current_space_config.roles if current_space_config else []
+
+    def set_current_role(self, role_name: str) -> None:
+        """Set the current role."""
+        if not self.current_space:
+            return
+        
+        current_space_config = self.spaces.get(self.current_space)
+        if not current_space_config or not current_space_config.roles:
+            return
+            
+        if role_name in [role['name'] for role in current_space_config.roles]:
+            self.current_role = role_name
 
     def get_space_paths(self) -> List[Path]:
         """Get the paths for the current space."""

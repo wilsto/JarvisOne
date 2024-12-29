@@ -108,8 +108,11 @@ class QueryAnalyzerAgent(CoreAgent):
         if len(lines) > 2 and lines[2].startswith('reason:'):
             reason = lines[2].replace('reason:', '').strip()
         
-        logger.info(f"Query: '{query}' → Agent: '{selected_agent}' → Confidence: {agent_confidence} → Reason: {reason}")
+        # Extract the relevant part of the query after "=== End of History ==="
+        query_parts = query.split("=== End of History ===")
+        relevant_query = query_parts[-1].strip() if len(query_parts) > 1 else query
         
+        logger.info(f"Query: '{relevant_query}' → Agent: '{selected_agent}' → Confidence: {agent_confidence} → Reason: {reason}")
         # Get confidence score from verifier agent
         confidence_score, confidence_level, verifier_reason = confidence_verifier_agent.verify_confidence(
             query=query,

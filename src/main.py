@@ -1,28 +1,29 @@
 import streamlit as st
-from utils.logging_config import setup_logging, get_logs
+from pathlib import Path
+from core.workspace_manager import WorkspaceManager, SpaceType
+from core.config_manager import ConfigManager, CONFIG_DIR
 from ui.chat_ui import display_chat, init_chat_session
+from ui.apps import display_apps
+from utils.logging_config import setup_logging, get_logs
 from ui.interactions import InteractionDisplayFactory
 from ui.styles import get_all_styles
-from core.workspace_manager import WorkspaceManager, SpaceType
-from pathlib import Path
 from core.core_agent import CoreAgent
-from core.database.db_cleaner import clean_database
-from core.database.models import init_database
 from sqlalchemy.orm import sessionmaker
-from ui.apps import display_apps
 import yaml
 from datetime import datetime
-from core.config_manager import ConfigManager  # Import ConfigManager
+from typing import Dict
 
 # Configure logging first
 setup_logging()
+ConfigManager.initialize_logging()  # Initialize logging from config
 
-def load_app_state() -> dict:
+def load_app_state() -> Dict:
     """Load application state from configuration file."""
     config = ConfigManager._load_config()
     return config.get("app_state", {
         "workspace": "AGNOSTIC",
-        "cache_enabled": True
+        "cache_enabled": True,
+        "role": None
     })
 
 def initialize_session_state():
@@ -33,22 +34,33 @@ def initialize_session_state():
     # Initialize workspace first
     if 'workspace' not in st.session_state:
         st.session_state.workspace = SpaceType[app_state["workspace"]]
-        print(f"Initialized workspace to: {st.session_state.workspace}")  # Debug
     
     if 'workspace_manager' not in st.session_state:
-        config_dir = Path(__file__).parent.parent / "config"
-        st.session_state.workspace_manager = WorkspaceManager(config_dir)
+        st.session_state.workspace_manager = WorkspaceManager(CONFIG_DIR)
         st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
-        print("Created new workspace manager")  # Debug
-        print(f"Set current space to: {st.session_state.workspace}")  # Debug
     else:
         # Sync current space with workspace manager
         st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
-        print(f"Synchronized workspace manager to: {st.session_state.workspace}")  # Debug
 
     # Initialize cache state
     if 'cache_enabled' not in st.session_state:
         st.session_state.cache_enabled = app_state.get('cache_enabled', True)
+    
+    # Initialize role from app_state
+    if 'current_role' not in st.session_state:
+        if app_state.get('role'):
+            # Use role from app_state
+            st.session_state.current_role = app_state['role']
+            st.session_state.workspace_manager.set_current_role(app_state['role'])
+        else:
+            # Set first role as default if available
+            roles = st.session_state.workspace_manager.get_current_space_roles()
+            if roles:
+                default_role = roles[0]['name']
+                st.session_state.current_role = default_role
+                st.session_state.workspace_manager.set_current_role(default_role)
+            else:
+                st.session_state.current_role = None
 
 def get_search_title(query: str) -> str:
     """Generate a short and explicit title for the search."""
@@ -279,6 +291,7 @@ if __name__ == "__main__":
         chat_tab, library_tab, apps_tab = st.tabs(["💬 Chat", "📚 Library", "🔧 Apps"])
         with chat_tab:
             st.markdown('<div id="chat-tab-content">', unsafe_allow_html=True)
+            from ui.chat_ui import display_chat
             display_chat()  # Your function that generates chat content
             st.markdown('</div>', unsafe_allow_html=True)
         with library_tab:

@@ -24,18 +24,18 @@ GENERIC_UNCERTAINTY_RESPONSE = """
 If you are unable to confidently answer the question, state "I am not sure" instead of fabricating a response.
 """
 
-def build_system_prompt(workspace_prompt: str, workspace_scope: str) -> str:
-    """Build the complete system prompt by combining workspace-specific and generic prompts.
+def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
+    """Build the complete system prompt by combining context-specific and generic prompts.
     
     Args:
-        workspace_prompt (str): The workspace-specific system prompt
+        context_prompt (str): The context-specific system prompt
         workspace_scope (str): The workspace-specific scope
         
     Returns:
         str: The complete system prompt
     """
     return (
-        workspace_prompt
+        context_prompt
         + "\n\nYour core characteristics:\n"
         + GENERIC_CORE_CHARACTERISTICS
         + "\n\nYour response format:\n"
@@ -55,7 +55,6 @@ def generate_welcome_message(scope: str) -> str:
     Returns:
         str: A formatted welcome message
     """
-    print(f"Generating welcome message with scope: {scope}")  # Debug
     
     # Extract capabilities from scope
     capabilities = []
@@ -67,13 +66,11 @@ def generate_welcome_message(scope: str) -> str:
             if ':' in capability:
                 capability = capability.split(':')[0].strip()
             capabilities.append(capability)
-            print(f"Found capability: {capability}")  # Debug
 
     # Build welcome message
     welcome_message = "👋 Hello, I'm JarvisOne, your AI assistant!\n\n"
     
     if capabilities:
-        print(f"Total capabilities found: {len(capabilities)}")  # Debug
         welcome_message += "I can help you with:\n"
         for capability in capabilities[:5]:  # Limit to top 5 capabilities for conciseness
             welcome_message += f"• {capability}\n"
@@ -84,6 +81,5 @@ def generate_welcome_message(scope: str) -> str:
         print("No capabilities found in scope")  # Debug
     
     welcome_message += "\nHow can I assist you today?"
-    print(f"Generated welcome message: {welcome_message}")  # Debug
     
     return welcome_message

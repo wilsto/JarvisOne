@@ -10,13 +10,27 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+def configure_logging(level_str: str = "INFO"):
+    """Configure logging based on config file."""
+    level = getattr(logging, level_str.upper(), logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
 # Charger les variables d'environnement depuis .env
 load_dotenv()
+
+# Get the config directory relative to this file
+CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
+CONFIG_FILE = CONFIG_DIR / "config.yaml"
 
 class ConfigManager:
     """Configuration manager for application settings."""
     
-    CONFIG_FILE = "config/config.yaml"
+    CONFIG_FILE = str(CONFIG_FILE)
+    _config_cache = None  # Add config cache
     
     @classmethod
     def _ensure_config_dir(cls):
@@ -27,26 +41,26 @@ class ConfigManager:
     @classmethod
     def _load_config(cls) -> Dict:
         """Load the unified configuration file."""
+        # Return cached config if available
+        if cls._config_cache is not None:
+            return cls._config_cache
+            
         try:
             if os.path.exists(cls.CONFIG_FILE):
                 with open(cls.CONFIG_FILE, "r", encoding="utf-8") as f:
                     config = yaml.safe_load(f)
-                logger.info(f"Configuration loaded: {config}")
-                return config
+                    cls._config_cache = config  # Cache the config
+                    return config
         except Exception as e:
             logger.error(f"Error loading configuration: {e}")
+        return {}
         
-        # Default configuration
-        return {
-            "llm": {
-                "provider": "Ollama (Local)",
-                "model": "mistral:latest"
-            },
-            "app_state": {
-                "workspace": "AGNOSTIC",
-                "cache_enabled": True
-            }
-        }
+    @classmethod
+    def initialize_logging(cls):
+        """Initialize logging configuration."""
+        config = cls._load_config()
+        if "logging" in config and "level" in config["logging"]:
+            configure_logging(config["logging"]["level"])
     
     @classmethod
     def save_config(cls, config: Dict) -> None:
@@ -56,6 +70,7 @@ class ConfigManager:
             with open(cls.CONFIG_FILE, "w", encoding="utf-8") as f:
                 yaml.dump(config, f, indent=2)
             logger.info(f"Configuration saved: {config}")
+            cls._config_cache = config  # Update cache
         except Exception as e:
             logger.error(f"Error saving configuration: {e}")
     
@@ -162,3 +177,51 @@ class ConfigManager:
         return config.get("logging", {
             "level": "INFO"
         })
+
+    @classmethod
+    def load_workspace_preferences(cls) -> Dict:
+        """Load workspace preferences from unified config."""
+        config = cls._load_config()
+        # Try to get from app_state first
+        if 'app_state' in config and 'workspace' in config['app_state']:
+            return {
+                'workspace': config['app_state']['workspace'],
+                'role': config['app_state'].get('role')
+            }
+        # Fallback to legacy workspace section for backward compatibility
+        elif 'workspace' in config:
+            workspace_config = config['workspace']
+            # Migrate old config to new format
+            cls.save_workspace_preferences(
+                workspace_config.get('current', 'AGNOSTIC'),
+                workspace_config.get('role')
+            )
+            return {
+                'workspace': workspace_config.get('current'),
+                'role': workspace_config.get('role')
+            }
+        return {
+            'workspace': 'AGNOSTIC',
+            'role': None
+        }
+
+    @classmethod
+    def save_workspace_preferences(cls, workspace: str, role: str = None) -> None:
+        """Save workspace preferences to unified config."""
+        config = cls._load_config()
+        if 'app_state' not in config:
+            config['app_state'] = {}
+        
+        # Update app_state
+        config['app_state']['workspace'] = workspace
+        if role is not None:
+            config['app_state']['role'] = role
+        elif 'role' in config['app_state']:
+            # Remove role if None and exists
+            del config['app_state']['role']
+        
+        # Remove legacy workspace section if it exists
+        if 'workspace' in config:
+            del config['workspace']
+        
+        cls.save_config(config)

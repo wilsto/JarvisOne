@@ -53,9 +53,10 @@ class CoreAgent:
         
         # Ajouter le system prompt du workspace s'il existe
         if self.workspace_manager:
-            workspace_prompt = self.workspace_manager.get_current_space_prompt()
-            if workspace_prompt:
-                prompt_parts.append(workspace_prompt)
+            context_prompt = self.workspace_manager.get_current_context_prompt()
+            prompt_parts.append(context_prompt)
+        else:
+            logger.warning("No workspace_manager available, using base prompt only")
         
         # Ajouter les instructions système de l'agent
         prompt_parts.append(self.system_instructions)
@@ -114,6 +115,7 @@ class CoreAgent:
         """
         # On construit le prompt pour le LLM
         prompt = self._build_prompt(user_query)
+        logger.info(f"##DEBUG## Using final prompt: {prompt}...")
         
         # On demande au LLM de générer une réponse
         llm_response = self.llm.generate_response(prompt)
