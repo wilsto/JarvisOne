@@ -1,8 +1,8 @@
 app_state:
   cache_enabled: false
   notification_enabled: true
-  role: CDXO
-  workspace: WORK
+  role: Self
+  workspace: PERSONAL
 llm:
   default_model: mistral:latest
   default_provider: Ollama (Local)

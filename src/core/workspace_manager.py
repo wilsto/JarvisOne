@@ -113,7 +113,6 @@ class WorkspaceManager:
         
         # Add role-specific context if a role is selected
         role = next((r for r in current_space_config.roles if r['name'] == self.current_role), None)
-        logger.info(f"Current role: {role}")
         if role and 'prompt_context' in role:
             context_prompt = f"{context_prompt}\n\nRole Context:\n{role['prompt_context']}"
         
