@@ -6,7 +6,12 @@ import streamlit as st
 from core.core_agent import CoreAgent
 from core.config_manager import ConfigManager
 from core.llm_manager import get_llm_model
+from rag.enhancer import RAGEnhancer
+from rag.document_processor import DocumentProcessor
+from rag.middleware import RAGConfig
+from rag.processor import MessageProcessor
 from .query_analyzer_agent import agent as query_analyzer_agent
+from pathlib import Path
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -34,12 +39,55 @@ class AgentOrchestrator:
         if not self.workspace_manager:
             logger.warning("No workspace_manager in session_state, agents will have limited functionality")
         
+        # Initialize RAG components if enabled
+        self.rag_config = None
+        self.document_processor = None
+        config = ConfigManager.get_all_configs()
+        if config.get("rag", {}).get("enabled", False):
+            logger.info("RAG is enabled, initializing components")
+            self.rag_config = RAGConfig(**config["rag"]["config"])
+            self.document_processor = DocumentProcessor(
+                vector_db_path=str(Path(config.get("data_dir", "data")) / "vector_db")
+            )
+        
         self.query_analyzer = query_analyzer_agent
         self.available_agents = self._load_agents()
         logger.info(f"AgentOrchestrator initialized with agents: {list(self.available_agents.keys())}")
 
-    def _load_agents(self) -> Dict[str, CoreAgent]:
-        """Loads available agents from the agents package."""
+    def _enhance_agent_if_needed(
+        self,
+        agent_name: str,
+        agent: MessageProcessor
+    ) -> MessageProcessor:
+        """
+        Enhance agent with RAG if configured.
+        
+        Args:
+            agent_name: Name of the agent
+            agent: Agent to potentially enhance
+            
+        Returns:
+            Original or RAG-enhanced agent
+        """
+        if not self.rag_config or not self.document_processor:
+            return agent
+            
+        config = ConfigManager.get_all_configs()
+        rag_agents = config.get("rag", {}).get("agents", [])
+        
+        if agent_name in rag_agents:
+            logger.info(f"Enhancing agent {agent_name} with RAG")
+            return RAGEnhancer(agent, self.document_processor, self.rag_config)
+        
+        return agent
+
+    def _load_agents(self) -> Dict[str, MessageProcessor]:
+        """
+        Loads available agents from the agents package.
+        
+        Returns:
+            Dictionary of agent name to agent instance
+        """
         available_agents = {}
         package = importlib.import_module("features.agents")
         for _, name, is_package in pkgutil.walk_packages(package.__path__):
@@ -51,11 +99,14 @@ class AgentOrchestrator:
                         # Pass shared LLM instance and workspace_manager to agent
                         item.llm = self.llm
                         item.workspace_manager = self.workspace_manager
-                        available_agents[name.replace("_agent", "")] = item
+                        agent_name = name.replace("_agent", "")
+                        available_agents[agent_name] = self._enhance_agent_if_needed(
+                            agent_name, item
+                        )
         
         return available_agents
 
-    def _select_agent(self, user_query: str) -> CoreAgent:
+    def _select_agent(self, user_query: str) -> MessageProcessor:
         """Selects the appropriate agent based on user query."""
         try:
             # Use query analyzer agent

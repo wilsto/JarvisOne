@@ -20,3 +20,15 @@ tools:
     gui_path: C:\Program Files\Everything\Everything.exe
 ui:
   theme: default
+
+# RAG Configuration
+rag:
+  enabled: true
+  agents:
+    - chat  # Liste des agents qui utilisent RAG
+  vector_db:
+    path: "data/vector_db"  # Chemin unique pour la base ChromaDB
+  config:
+    max_results: 3
+    min_similarity: 0.7
+    importance_filter: "High"

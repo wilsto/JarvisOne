@@ -6,6 +6,7 @@ from core.workspace_manager import WorkspaceManager
 import logging
 from typing import List
 from pathlib import Path
+from rag.processor import MessageProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class ManagedLLM(LLM):
         except Exception as e:
             return f"Error generating response: {str(e)}"
 
-class CoreAgent:
+class CoreAgent(MessageProcessor):
     def __init__(self, agent_name: str, system_instructions: str, 
                  tools: list = None, output_formatter: callable = None,
                  interactions: callable = None,
@@ -152,3 +153,22 @@ class CoreAgent:
             }
 
         return content
+
+    async def process_message(
+        self,
+        message: str,
+        workspace_id: str,
+        **kwargs: dict
+    ) -> str:
+        """
+        Process a message as required by MessageProcessor interface.
+        
+        Args:
+            message: The message to process
+            workspace_id: ID of the current workspace
+            **kwargs: Additional processing parameters
+            
+        Returns:
+            The processed response
+        """
+        return await self.run(message, workspace_id, **kwargs)
