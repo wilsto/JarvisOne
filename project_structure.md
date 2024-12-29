@@ -116,6 +116,26 @@ This document describes the purpose of each directory and file within the Jarvis
 
     - **Purpose**: Manages message flow, history, and state in the chat interface.
 
+  #### `src/rag/`
+
+  - **Purpose**: Implements Retrieval-Augmented Generation (RAG) functionality for enhanced context-aware responses.
+
+    #### `document_processor.py`
+    
+    - **Purpose**: Handles document processing, chunking, embedding generation, and vector storage using ChromaDB.
+    - **Key Components**:
+      - `DocumentProcessor`: Core class managing document processing and vector operations
+      - Importance-based document classification (High/Medium/Low/Excluded)
+      - Workspace isolation for document collections
+      - Asynchronous processing capabilities
+      - Semantic search functionality
+
+    #### `data/vector_db/`
+    
+    - **Purpose**: Persistent storage for document embeddings and vector indices
+    - Organized by workspace for isolated document management
+    - Uses ChromaDB for efficient vector storage and retrieval
+
   #### `src/ui/`
 
   - **Purpose**: Implements the Streamlit-based user interface components.
@@ -169,3 +189,16 @@ This document describes the purpose of each directory and file within the Jarvis
   #### `tests/conftest.py`
 
   - **Purpose**: Defines shared test fixtures and configuration.
+
+## Tech Stack
+
+* **Python**: Use Uv, Python 3.12.
+* **Streamlit**: Version 1.31+ for UI.
+* **LLMs**: Gemini 2.0, ChatGPT-4, Ollama, Anthropic.
+* **Testing**: Pytest + Streamlit Testing.
+* **Config**: PyYAML.
+* **RAG Stack**:
+  * LangChain for text processing
+  * SentenceTransformers for embeddings
+  * ChromaDB for vector storage
+* **Future Technologies**: GTTS/SpeechRecognition for future voice capabilities.

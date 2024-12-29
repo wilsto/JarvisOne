@@ -63,3 +63,40 @@
   * Project base configuration is done through YAML configuration files.
 * **System Prompts:**
   * System prompts are used to guide the behavior of the AI agents for each workspace.
+
+## RAG Implementation
+
+### Document Processing
+
+- **Chunking Strategy**
+  - Use RecursiveCharacterTextSplitter for consistent text segmentation
+  - Chunk size and overlap parameters must be tuned for optimal retrieval
+  - Handle empty files and invalid content gracefully
+
+### Vector Storage
+
+- **ChromaDB Integration**
+  - Persistent storage in workspace-specific collections
+  - Efficient embedding storage and retrieval
+  - Thread-safe operations for concurrent processing
+
+### Performance Considerations
+
+- **Asynchronous Processing**
+  - Document processing runs in separate threads
+  - Non-blocking operations for UI responsiveness
+  - Optional wait-for-completion functionality
+
+### Security & Isolation
+
+- **Workspace Separation**
+  - Strict isolation between workspace collections
+  - No cross-contamination of document embeddings
+  - Importance-level based document classification
+
+### Dependencies
+
+- **Core Libraries**
+  - LangChain for text processing
+  - SentenceTransformers for embedding generation
+  - ChromaDB for vector storage

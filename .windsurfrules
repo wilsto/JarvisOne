@@ -6,7 +6,7 @@ JarvisOne is a modular, scalable, conversational AI assistant.
 
 * **LLMs**: Uses Gemini 2.0, ChatGPT-4, Ollama, and Anthropic for flexibility.
 * **Workspaces**: Supports multiple workspaces (e.g., `coaching`, `dev`, `personal`, `work`), each with its own specific configuration and system prompt.
-* **RAG**: (Future) Enhanced contextualization using Retrieval-Augmented Generation.
+* **RAG**: Enhanced contextualization using Retrieval-Augmented Generation.
 * **Modular Design**: Designed for flexible and independent development; each component must have clear responsibilities.
 * **Document Management**: Integrated document handling.
 * **Core UI**: **The primary way to interact with JarvisOne is via the Streamlit chat interface.**
@@ -19,7 +19,11 @@ JarvisOne is a modular, scalable, conversational AI assistant.
 * **LLMs**: Gemini 2.0, ChatGPT-4, Ollama, Anthropic.
 * **Testing**: Pytest + Streamlit Testing.
 * **Config**: PyYAML.
-* **Future Technologies**: LangChain, FAISS, SentenceTransformers, GTTS/SpeechRecognition are considered for future enhancements.
+* **RAG Stack**:
+  * LangChain for text processing
+  * SentenceTransformers for embeddings
+  * ChromaDB for vector storage
+* **Future Technologies**: GTTS/SpeechRecognition for future voice capabilities.
 
 ## Core Tools
 

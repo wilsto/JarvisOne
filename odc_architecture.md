@@ -46,6 +46,39 @@
   * Avoid reimplementing existing functionalities.
   * Use of an interaction for each usage of an external tool.
 
+## RAG Architecture
+
+### Component Integration
+
+```
+[User Interface] <-> [Agent Orchestrator] <-> [RAG System]
+                                              |
+                                    [Document Processor]
+                                              |
+                                     [Vector Database]
+```
+
+### Key Architectural Decisions
+
+1. **Modular Design**
+   - RAG system is independent of core chat functionality
+   - Document processor is isolated from vector storage concerns
+   - Workspace-specific collections maintain data isolation
+
+2. **Scalability Considerations**
+   - Asynchronous document processing
+   - Thread-safe vector operations
+   - Collection-per-workspace design
+
+3. **Data Flow**
+   - Documents -> Processing -> Embeddings -> Storage
+   - Query -> Retrieval -> Context Enhancement -> Response
+
+4. **Extension Points**
+   - Pluggable embedding models
+   - Configurable importance levels
+   - Flexible chunking strategies
+
 ## Core File Structure
 
 JarvisOne/
