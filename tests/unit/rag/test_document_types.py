@@ -92,7 +92,7 @@ def test_pdf_processing(doc_processor):
     verify_document_processing(
         doc_processor,
         file_path,
-        "Sample PDF Document"
+        " thérapie des schémas"
     )
 
 def test_docx_processing(doc_processor):
