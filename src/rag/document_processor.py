@@ -10,6 +10,7 @@ import chromadb
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from chromadb.config import Settings
+import hashlib
 
 from .document_handlers import (
     BaseDocumentHandler,
@@ -43,7 +44,7 @@ class DocumentProcessor:
         
         logger.debug("Initializing HuggingFaceEmbeddings")
         self.embeddings = HuggingFaceEmbeddings(
-            model_name="all-mpnet-base-v2"
+            model_name="sentence-transformers/all-MiniLM-L6-v2"  # 384 dimensions
         )
         
         self._error_queue = queue.Queue()
@@ -123,28 +124,9 @@ class DocumentProcessor:
             result = handler.extract_text(path)
             if isinstance(result, tuple):
                 text, metadata = result
-                # Merge handler metadata with our metadata
-                metadatas = [{
-                    **metadata,
-                    "file_path": str(file_path),
-                    "workspace_id": workspace_id,
-                    "importance_level": importance_level,
-                    "created_at": created_at,
-                    "modified_at": modified_at,
-                    "file_type": path.suffix.lower(),
-                    "chunk_index": i
-                } for i in range(len(chunks))]
             else:
                 text = result
-                metadatas = [{
-                    "file_path": str(file_path),
-                    "workspace_id": workspace_id,
-                    "importance_level": importance_level,
-                    "created_at": created_at,
-                    "modified_at": modified_at,
-                    "file_type": path.suffix.lower(),
-                    "chunk_index": i
-                } for i in range(len(chunks))]
+                metadata = {}
                 
             if not text:
                 logger.warning(f"Empty file: {file_path}")
@@ -159,6 +141,18 @@ class DocumentProcessor:
                 logger.warning(f"No chunks generated from {file_path}")
                 return
 
+            # Prepare metadata for each chunk
+            metadatas = [{
+                **metadata,
+                "file_path": str(file_path),
+                "workspace_id": workspace_id,
+                "importance_level": importance_level,
+                "created_at": created_at,
+                "modified_at": modified_at,
+                "file_type": path.suffix.lower(),
+                "chunk_index": i
+            } for i in range(len(chunks))]
+
             # Get collection
             collection = self._get_collection(workspace_id)
             if not collection:
@@ -170,13 +164,38 @@ class DocumentProcessor:
             embeddings = self.embeddings.embed_documents(chunks)
             logger.info(f"Generated {len(embeddings)} embeddings")
 
+            # Generate unique document IDs using full path hash
+            file_path_hash = hashlib.sha256(str(file_path).encode()).hexdigest()[:8]
+            doc_ids = [f"{workspace_id}_{file_path_hash}_{i}" for i in range(len(chunks))]
+            
+            # Check for existing documents and remove them
+            try:
+                # First try exact IDs
+                existing_docs = collection.get(ids=doc_ids)
+                if existing_docs and existing_docs['ids']:
+                    logger.info(f"Found {len(existing_docs['ids'])} existing chunks for {file_path}, removing them")
+                    collection.delete(ids=existing_docs['ids'])
+                
+                # Then check for any chunks from this file using metadata
+                existing_by_path = collection.get(
+                    where={"$and": [
+                        {"file_path": {"$eq": str(file_path)}},
+                        {"workspace_id": {"$eq": workspace_id}}
+                    ]}
+                )
+                if existing_by_path and existing_by_path['ids']:
+                    logger.info(f"Found {len(existing_by_path['ids'])} additional chunks by path, removing them")
+                    collection.delete(ids=existing_by_path['ids'])
+            except Exception as e:
+                logger.warning(f"Error checking existing documents: {e}")
+
             # Add documents to collection
             logger.debug("Adding documents to collection")
             collection.add(
                 embeddings=embeddings,
                 documents=chunks,
                 metadatas=metadatas,
-                ids=[f"{workspace_id}_{os.path.basename(file_path)}_{i}" for i in range(len(chunks))]
+                ids=doc_ids
             )
             logger.info(f"Added {len(chunks)} documents to collection")
 
@@ -247,10 +266,24 @@ class DocumentProcessor:
             
             # Search in collection
             logger.debug(f"Searching collection with n_results={n_results}")
+            search_where = where
+            if where:
+                # Convert simple where dict to ChromaDB format if needed
+                if not any(key.startswith('$') for key in where.keys()):
+                    # If only one condition, use simple $eq
+                    if len(where) == 1:
+                        key, value = next(iter(where.items()))
+                        search_where = {key: {"$eq": value}}
+                    # If multiple conditions, use $and
+                    else:
+                        search_where = {
+                            "$and": [{k: {"$eq": v}} for k, v in where.items()]
+                        }
+            
             results = collection.query(
                 query_embeddings=[query_embedding],
                 n_results=n_results,
-                where=where,
+                where=search_where,
                 include=["documents", "metadatas", "distances"]
             )
             

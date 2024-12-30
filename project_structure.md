@@ -73,6 +73,10 @@ This document describes the purpose of each directory and file within the Jarvis
     ##### `src/core/database/`
 
     - **Purpose**: Provides a unified interface for data storage and retrieval operations.
+    - **Best Practices**:
+      - **SQLite Date/Time**: Store dates as TEXT in ISO-8601 format (YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM)
+      - **Schema Documentation**: Always comment date format in CREATE TABLE statements
+      - **Validation**: Ensure dates are properly formatted before insertion
 
     ##### `src/core/analysis/`
 

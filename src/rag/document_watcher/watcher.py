@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import List, Optional
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent, FileCreatedEvent, FileDeletedEvent
+from datetime import datetime
+import hashlib
 
 from rag.document_processor import DocumentProcessor
 from .document_tracker import DocumentTracker
@@ -38,24 +40,46 @@ class DocumentEventHandler(FileSystemEventHandler):
         """Check if file should be processed based on extension."""
         return path.suffix.lower() in self.supported_extensions
         
+    def _get_file_info(self, file_path: Path) -> tuple:
+        """Get file modification time and hash."""
+        # Get modification time
+        mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+        
+        # Calculate file hash
+        hasher = hashlib.sha256()
+        with open(file_path, 'rb') as f:
+            buf = f.read(65536)  # Read in 64kb chunks
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = f.read(65536)
+        return mtime, hasher.hexdigest()
+        
     def on_created(self, event: FileCreatedEvent):
         """Handle file creation event."""
         if not event.is_directory and self._should_process(Path(event.src_path)):
-            logger.info(f"New file detected: {event.src_path}")
+            path = Path(event.src_path)
+            logger.info(f"New file detected: {path}")
+            mtime, file_hash = self._get_file_info(path)
             self.doc_tracker.update_document(
                 workspace_id=self.workspace_id,
-                file_path=event.src_path,
-                status='pending'
+                file_path=str(path),
+                status='pending',
+                last_modified=mtime,
+                hash_value=file_hash
             )
             
     def on_modified(self, event: FileModifiedEvent):
         """Handle file modification event."""
         if not event.is_directory and self._should_process(Path(event.src_path)):
-            logger.info(f"File modified: {event.src_path}")
+            path = Path(event.src_path)
+            logger.info(f"File modified: {path}")
+            mtime, file_hash = self._get_file_info(path)
             self.doc_tracker.update_document(
                 workspace_id=self.workspace_id,
-                file_path=event.src_path,
-                status='pending'
+                file_path=str(path),
+                status='pending',
+                last_modified=mtime,
+                hash_value=file_hash
             )
             
     def on_deleted(self, event: FileDeletedEvent):
@@ -108,6 +132,8 @@ class FileSystemWatcher:
         """Start watching directory."""
         logger.info(f"Starting watchers for paths: {self.paths}")
         self.observer.start()
+        self.scan_existing_files()  # Scan existing files on startup
+        self.processor.start()  # Start the background processor
         
     def stop(self):
         """Stop watching directory."""

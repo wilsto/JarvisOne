@@ -59,8 +59,8 @@ class DocumentTracker:
                     file_path TEXT NOT NULL,
                     status TEXT CHECK(status IN ('pending', 'processed', 'error', 'deleted')) NOT NULL,
                     error_message TEXT,
-                    last_modified datetime NOT NULL,
-                    last_processed datetime,
+                    last_modified TEXT NOT NULL,  -- ISO-8601 format (YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM)
+                    last_processed TEXT,          -- ISO-8601 format (YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM)
                     hash TEXT,
                     PRIMARY KEY (workspace_id, file_path)
                 )
@@ -115,10 +115,10 @@ class DocumentTracker:
                     hash = ?
             ''', (
                 workspace_id, str(file_path), status, error_message,
-                last_modified, now if status == 'processed' else None,
+                last_modified.isoformat(), now.isoformat() if status == 'processed' else None,
                 hash_value,
-                status, error_message, last_modified,
-                status, now,
+                status, error_message, last_modified.isoformat(),
+                status, now.isoformat(),
                 hash_value
             ))
             
@@ -143,10 +143,6 @@ class DocumentTracker:
             results = []
             for row in cursor.fetchall():
                 doc = dict(row)
-                # Convert any datetime objects to isoformat strings
-                for key, value in doc.items():
-                    if isinstance(value, datetime):
-                        doc[key] = value.isoformat()
                 results.append(doc)
             return results
             
@@ -166,10 +162,6 @@ class DocumentTracker:
             row = cursor.fetchone()
             if row:
                 doc = dict(row)
-                # Convert any datetime objects to isoformat strings
-                for key, value in doc.items():
-                    if isinstance(value, datetime):
-                        doc[key] = value.isoformat()
                 return doc
             return None
             

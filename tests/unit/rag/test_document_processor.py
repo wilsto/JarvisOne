@@ -108,7 +108,7 @@ def test_importance_filtering(doc_processor, temp_dir):
     results = doc_processor.search_documents(
         "document",
         "test_workspace",
-        importance_filter="High"
+        where={"importance_level": "High"}
     )
     
     assert len(results) > 0
@@ -161,12 +161,16 @@ def test_empty_and_invalid_cases(doc_processor, temp_dir):
     )
     
     # Non-existent file
-    with pytest.raises(FileNotFoundError):
-        doc_processor._process_file_internal(
-            "nonexistent.txt",
-            "test_workspace",
-            "High"
-        )
+    doc_processor._process_file_internal(
+        "nonexistent.txt",
+        "test_workspace",
+        "High"
+    )
+    
+    # Verify no documents were added
+    collection = doc_processor._get_collection("test_workspace")
+    results = collection.get()
+    assert len(results['documents']) == 0, "Documents should not be added for non-existent file"
     
     # Empty query
     results = doc_processor.search_documents(
@@ -216,7 +220,6 @@ def test_process_document_basic(doc_processor, temp_dir):
     doc_processor.process_document(
         str(test_file),
         "test_workspace",
-        temp_dir,
         importance_level="High"
     )
     
@@ -228,3 +231,46 @@ def test_process_document_basic(doc_processor, temp_dir):
     )
     assert len(results['documents']) > 0
     assert "Test document content" in results['documents'][0][0]
+
+def test_search_pdf_with_accents(doc_processor):
+    """Test searching in PDF documents with accented characters."""
+    # Use the test PDF file
+    test_file = Path("tests/unit/rag/test_files/Présentation-thérapie-des-schémas-sans-détails-pt-journée-de-la-psychothérapie.pdf")
+    
+    # Process the document
+    doc_processor._process_file_internal(
+        str(test_file),
+        "COACHING",
+        "High"
+    )
+    
+    # Test various search queries with and without accents
+    test_queries = [
+        ("thérapie des schémas", "Test with accents"),
+        ("therapie des schemas", "Test without accents"),
+        ("JOURNÉE DE LA PSYCHOTHÉRAPIE", "Test with uppercase and accents"),
+        ("journee psychotherapie", "Test without accents lowercase")
+    ]
+    
+    for query, description in test_queries:
+        results = doc_processor.search_documents(
+            query,
+            "COACHING",
+            n_results=5
+        )
+        
+        assert len(results) > 0, f"No results found for query: {query} ({description})"
+        
+        # Verify the results contain relevant content
+        found_relevant = any(
+            "thérapie" in result["content"].lower() or 
+            "schémas" in result["content"].lower() or
+            "psychothérapie" in result["content"].lower()
+            for result in results
+        )
+        assert found_relevant, f"Relevant content not found for query: {query} ({description})"
+        
+        # Verify metadata
+        assert results[0]["metadata"]["file_type"] == ".pdf"
+        assert results[0]["metadata"]["workspace_id"] == "COACHING"
+        assert results[0]["metadata"]["importance_level"] == "High"

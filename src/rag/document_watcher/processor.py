@@ -75,7 +75,7 @@ class DocumentChangeProcessor(StreamlitThread):
                             self.workspace_id,
                             doc['file_path'],
                             status='error',
-                            error=str(e)
+                            error_message=str(e)
                         )
                 
                 # Sleep between processing batches
