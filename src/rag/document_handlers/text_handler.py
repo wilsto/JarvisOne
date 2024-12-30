@@ -10,20 +10,13 @@ from .base_handler import BaseDocumentHandler
 class TextHandler(BaseDocumentHandler):
     """Handler for text-based formats like JSON, Markdown, and plain text."""
     
-    SUPPORTED_EXTENSIONS: Set[str] = {
-        '.json', '.md', '.markdown', '.txt'
-    }
+    @property
+    def SUPPORTED_EXTENSIONS(self) -> Set[str]:
+        return {'.json', '.md', '.markdown', '.txt'}
     
     def __init__(self, max_file_size_mb: int = 10):
         """Initialize the handler."""
         super().__init__(max_file_size_mb)
-    
-    def can_handle(self, file_path: Path) -> bool:
-        """Check if file can be handled by this handler."""
-        if not super().can_handle(file_path):
-            return False
-        
-        return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
     
     def extract_text(self, file_path: Path) -> tuple[str, Dict[str, Any]]:
         """

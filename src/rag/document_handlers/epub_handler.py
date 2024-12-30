@@ -11,18 +11,13 @@ from .base_handler import BaseDocumentHandler
 class EpubHandler(BaseDocumentHandler):
     """Handler for EPUB format."""
     
-    SUPPORTED_EXTENSIONS: Set[str] = {'.epub'}
+    @property
+    def SUPPORTED_EXTENSIONS(self) -> Set[str]:
+        return {'.epub'}
     
     def __init__(self, max_file_size_mb: int = 10):
         """Initialize the handler."""
         super().__init__(max_file_size_mb)
-    
-    def can_handle(self, file_path: Path) -> bool:
-        """Check if file can be handled by this handler."""
-        if not super().can_handle(file_path):
-            return False
-        
-        return file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS
     
     def _extract_text_from_html(self, html_content: str) -> str:
         """Extract text from HTML content."""
