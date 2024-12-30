@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD029 -->
-# JarvisOne: Your Modular Personal AI Assistant 
+# JarvisOne: Your Modular Personal AI Assistant
 
 JarvisOne is a modular and scalable conversational AI assistant that integrates with external tools, notably for file searching. Designed to be flexible and customizable, JarvisOne allows you to interact with different LLMs and manage your files effectively.
 
@@ -12,6 +12,21 @@ JarvisOne is a modular and scalable conversational AI assistant that integrates 
 * **RAG Integration:** Enhanced context-aware responses using document retrieval and embeddings.
 * **Intuitive Chat Interface:** User-friendly chat interface built with Streamlit.
 * **Flexible Configuration:** Easy configuration of LLM providers, external tools, and system prompts for different use cases.
+
+## Features
+
+* 🤖 Multiple LLM Support (Gemini 2.0, ChatGPT-4, Ollama, Anthropic)
+* 🎯 Focused System Prompts
+* 🗂️ Workspace Management & 🎭 Specialized Roles:
+  * 👨‍💻 Dev: Code Assistant & Project Management
+  * 👔 Work: Professional Communication & Analysis
+  * 🎓 Coaching: Personal Development & Learning
+  * 🏠 Personal: Daily Tasks & Organization
+* 🔍 RAG-Enhanced Contextual Understanding
+* 📝 Document Processing:
+  * Text Files (TXT, JSON, MD)
+  * Office Documents (PDF, DOCX, XLSX, PPTX)
+  * E-Books (EPUB)
 
 ## Installation 🚀
 

@@ -6,7 +6,7 @@ Handles text file processing, chunking, embedding generation, and vector storage
 import os
 import threading
 import logging
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict, Any, List
 from pathlib import Path
 import queue
 
@@ -14,6 +14,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 import chromadb
 from chromadb.config import Settings
+
+from .document_handlers import MarkItDownHandler, TextHandler, EpubHandler, BaseDocumentHandler
 
 ImportanceLevelType = Literal["High", "Medium", "Low", "Excluded"]
 
@@ -43,6 +45,14 @@ class DocumentProcessor:
         )
         self._error_queue = queue.Queue()
         self._client = None
+        
+        # Initialize document handlers
+        self.handlers: List[BaseDocumentHandler] = [
+            MarkItDownHandler(),  # For PDF, DOCX, XLSX, PPTX
+            TextHandler(),        # For JSON, MD
+            EpubHandler(),        # For EPUB
+        ]
+        
         logger.info("DocumentProcessor initialization complete")
 
     def _get_collection(self, workspace_id: str) -> chromadb.Collection:
@@ -146,6 +156,70 @@ class DocumentProcessor:
             self._error_queue.put(e)
             raise
 
+    def process_document(
+        self,
+        file_path: str,
+        workspace_id: str,
+        vector_db_path: str,
+        importance_level: ImportanceLevelType = "Medium",
+        wait_for_completion: bool = False
+    ):
+        """
+        Process any supported document type for RAG.
+        
+        Args:
+            file_path: Path to the document to process
+            workspace_id: ID of the workspace the document belongs to
+            vector_db_path: Base path for vector database storage
+            importance_level: Importance level of the document ("High", "Medium", "Low", "Excluded")
+            wait_for_completion: If True, wait for processing to complete before returning
+            
+        Raises:
+            FileNotFoundError: If the input file does not exist
+            ValueError: If file is too large, unsupported type, or cannot be processed
+        """
+        try:
+            file_path = Path(file_path)
+            if not file_path.exists():
+                raise FileNotFoundError(f"File not found: {file_path}")
+
+            # Find appropriate handler
+            handler = next(
+                (h for h in self.handlers if h.can_handle(file_path)),
+                None
+            )
+            
+            if handler is None:
+                raise ValueError(f"No handler found for file: {file_path}")
+
+            # Extract text using appropriate handler
+            text_content, metadata = handler.extract_text(file_path)
+            
+            # Add importance level to metadata
+            metadata['importance_level'] = importance_level
+            metadata['workspace_id'] = workspace_id
+            
+            # Process chunks
+            chunks = self.text_splitter.split_text(text_content)
+            
+            # Get collection for workspace
+            collection = self._get_collection(workspace_id)
+            
+            # Add chunks to collection
+            for i, chunk in enumerate(chunks):
+                collection.add(
+                    documents=[chunk],
+                    metadatas=[{**metadata, 'chunk_id': i}],
+                    ids=[f"{file_path.stem}_{i}"]
+                )
+                
+            logger.info(f"Successfully processed file: {file_path}")
+            
+        except Exception as e:
+            logger.error(f"Error processing file {file_path}: {e}")
+            self._error_queue.put(e)
+            raise
+
     def search_documents(
         self,
         query: str,
@@ -210,43 +284,3 @@ class DocumentProcessor:
         except Exception as e:
             logger.error(f"Error during document search: {str(e)}")
             raise
-
-def process_text_file(
-    file_path: str,
-    workspace_id: str,
-    vector_db_path: str,
-    importance_level: ImportanceLevelType = "Medium",
-    wait_for_completion: bool = False
-) -> None:
-    """
-    Process a text file for RAG, including chunking, embedding generation, and storage.
-    
-    Args:
-        file_path: Path to the text file to process
-        workspace_id: ID of the workspace the document belongs to
-        vector_db_path: Base path for vector database storage
-        importance_level: Importance level of the document ("High", "Medium", "Low", "Excluded")
-        wait_for_completion: If True, wait for processing to complete before returning
-    
-    This function runs asynchronously in a separate thread to avoid blocking the main thread.
-    Raises:
-        FileNotFoundError: If the input file does not exist
-        Exception: Any other error that occurs during processing
-    """
-    processor = DocumentProcessor(vector_db_path)
-    
-    # Create and start processing thread
-    process_thread = threading.Thread(
-        target=processor._process_file_internal,
-        args=(file_path, workspace_id, importance_level)
-    )
-    process_thread.start()
-    
-    if wait_for_completion:
-        process_thread.join()
-        # Check if there was an error in the thread
-        try:
-            error = processor._error_queue.get_nowait()
-            raise error
-        except queue.Empty:
-            pass

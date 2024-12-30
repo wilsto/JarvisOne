@@ -1,8 +1,8 @@
 app_state:
   cache_enabled: false
   notification_enabled: true
-  role: Self
-  workspace: PERSONAL
+  role: AI_Engineer
+  workspace: DEV
 llm:
   default_model: mistral:latest
   default_provider: Ollama (Local)
@@ -14,21 +14,30 @@ llm:
 logging:
   level: INFO
   max_log_entries: 1000
+rag:
+  agents:
+  - chat
+  config:
+    importance_filter: High
+    max_results: 3
+    min_similarity: 0.7
+  document_processing:
+    max_file_size_mb: 10
+    supported_extensions:
+    - .txt
+    - .pdf
+    - .docx
+    - .xlsx
+    - .pptx
+    - .epub
+    - .md
+    - .json
+  enabled: true
+  vector_db:
+    path: data/vector_db
 tools:
   everything:
     cli_path: C:\Program Files\Everything\es.exe
     gui_path: C:\Program Files\Everything\Everything.exe
 ui:
   theme: default
-
-# RAG Configuration
-rag:
-  enabled: true
-  agents:
-    - chat  # Liste des agents qui utilisent RAG
-  vector_db:
-    path: "data/vector_db"  # Chemin unique pour la base ChromaDB
-  config:
-    max_results: 3
-    min_similarity: 0.7
-    importance_filter: "High"

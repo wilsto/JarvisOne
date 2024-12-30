@@ -207,3 +207,24 @@ def test_cross_workspace_search(doc_processor, temp_dir):
     assert len(results2) == 1
     assert results1[0]["metadata"]["workspace_id"] == "workspace1"
     assert results2[0]["metadata"]["workspace_id"] == "workspace2"
+
+def test_process_document_basic(doc_processor, temp_dir):
+    """Test basic document processing."""
+    content = "Test document content"
+    test_file = create_test_file(temp_dir, "test.md", content)
+    
+    doc_processor.process_document(
+        str(test_file),
+        "test_workspace",
+        temp_dir,
+        importance_level="High"
+    )
+    
+    # Verify document was added to collection
+    collection = doc_processor._get_collection("test_workspace")
+    results = collection.query(
+        query_texts=["test"],
+        n_results=1
+    )
+    assert len(results['documents']) > 0
+    assert "Test document content" in results['documents'][0][0]

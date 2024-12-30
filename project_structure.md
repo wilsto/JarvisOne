@@ -136,6 +136,15 @@ This document describes the purpose of each directory and file within the Jarvis
     - Organized by workspace for isolated document management
     - Uses ChromaDB for efficient vector storage and retrieval
 
+    ### `src/rag/document_handlers/`
+
+    - **Purpose**: Provides document handlers for different file types.
+
+    - `base_handler.py`: Base class for document handlers
+    - `text_handler.py`: Handler for text files (TXT, JSON, MD)
+    - `markitdown_handler.py`: Handler for Office documents
+    - `epub_handler.py`: Handler for EPUB e-books
+
   #### `src/ui/`
 
   - **Purpose**: Implements the Streamlit-based user interface components.

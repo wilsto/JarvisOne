@@ -64,6 +64,23 @@
 * **System Prompts:**
   * System prompts are used to guide the behavior of the AI agents for each workspace.
 
+## Document Processing
+
+### Supported Document Types
+- **Text Files**: `.txt`, `.json`, `.md`, `.markdown`
+- **Office Documents**: `.pdf`, `.docx`, `.xlsx`, `.pptx` (via MarkItDown)
+- **E-Books**: `.epub`
+
+### Document Handlers
+- **TextHandler**: Processes plain text files, JSON, and Markdown
+- **MarkItDownHandler**: Converts Office documents to text
+- **EpubHandler**: Extracts text from EPUB e-books
+
+### Processing Strategy
+- Each handler validates file size and type
+- Text extraction preserves relevant content
+- Documents are chunked and embedded for search
+
 ## RAG Implementation
 
 ### Document Processing
