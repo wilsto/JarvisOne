@@ -46,7 +46,7 @@ logs/
 # OS specific
 .DS_Store
 Thumbs.db
-data/conversations.db
+data/
+src/core/database/migrations/
 docs/~$features.pptx
-data/conversations.db-journal
-data/conversations copy.db
+

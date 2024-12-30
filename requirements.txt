@@ -39,5 +39,6 @@ markdown
 # RAG (Retrieval-Augmented Generation)
 langchain 
 langchain-community 
+langchain_huggingface
 sentence-transformers 
 chromadb

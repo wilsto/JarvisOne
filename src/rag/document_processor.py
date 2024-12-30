@@ -1,56 +1,59 @@
-"""
-Document processor module for RAG functionality in JarvisOne.
-Handles text file processing, chunking, embedding generation, and vector storage.
-"""
+"""Process and manage documents for RAG."""
 
 import os
-import threading
 import logging
-from typing import Optional, Literal, Dict, Any, List
-from pathlib import Path
 import queue
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import SentenceTransformerEmbeddings
+from datetime import datetime
+from pathlib import Path
+from typing import Optional, Literal, Dict, Any, List
 import chromadb
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from chromadb.config import Settings
 
-from .document_handlers import MarkItDownHandler, TextHandler, EpubHandler, BaseDocumentHandler
+from .document_handlers import (
+    BaseDocumentHandler,
+    MarkItDownHandler,
+    TextHandler,
+    EpubHandler
+)
+
+logger = logging.getLogger(__name__)
 
 ImportanceLevelType = Literal["High", "Medium", "Low", "Excluded"]
 
-# Configure logger
-logger = logging.getLogger(__name__)
-
 class DocumentProcessor:
-    """Handles document processing for RAG functionality."""
-    
+    """Process documents for RAG."""
+
     def __init__(self, vector_db_path: str):
-        """
-        Initialize the document processor.
+        """Initialize document processor.
         
         Args:
             vector_db_path: Base path for vector database storage
         """
         logger.info(f"Initializing DocumentProcessor with vector_db_path: {vector_db_path}")
         self.vector_db_path = Path(vector_db_path)
+        
+        # Initialize text splitter for chunking
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=100,  # Smaller chunks for testing
-            chunk_overlap=20,
+            chunk_size=1000,
+            chunk_overlap=200,
             length_function=len,
         )
-        logger.debug("Initializing SentenceTransformerEmbeddings")
-        self.embeddings = SentenceTransformerEmbeddings(
+        
+        logger.debug("Initializing HuggingFaceEmbeddings")
+        self.embeddings = HuggingFaceEmbeddings(
             model_name="all-mpnet-base-v2"
         )
+        
         self._error_queue = queue.Queue()
         self._client = None
         
-        # Initialize document handlers
-        self.handlers: List[BaseDocumentHandler] = [
-            MarkItDownHandler(),  # For PDF, DOCX, XLSX, PPTX
-            TextHandler(),        # For JSON, MD
-            EpubHandler(),        # For EPUB
+        # Initialize document handlers - instances créées une seule fois
+        self.handlers = [
+            MarkItDownHandler(),  # Pour PDF, DOCX, XLSX, PPTX
+            TextHandler(),        # Pour JSON, MD
+            EpubHandler()         # Pour EPUB
         ]
         
         logger.info("DocumentProcessor initialization complete")
@@ -92,23 +95,58 @@ class DocumentProcessor:
         self,
         file_path: str,
         workspace_id: str,
-        importance_level: ImportanceLevelType
+        importance_level: ImportanceLevelType = "Medium"
     ) -> None:
-        """Internal method to process a text file and store in vector database."""
+        """Internal method to process a file."""
         try:
-            # Validate file exists
-            if not os.path.exists(file_path):
-                logger.error(f"File not found: {file_path}")
-                raise FileNotFoundError(f"File not found: {file_path}")
-
-            # Read the file
-            logger.info(f"Processing file: {file_path}")
-            with open(file_path, 'r', encoding='utf-8') as file:
-                text = file.read()
-                logger.debug(f"Read {len(text)} characters")
-
-            # Handle empty files
-            if not text.strip():
+            path = Path(file_path)
+            if not path.exists():
+                logger.warning(f"File does not exist: {file_path}")
+                return
+                
+            # Get file stats
+            stats = path.stat()
+            created_at = datetime.fromtimestamp(stats.st_ctime).isoformat()
+            modified_at = datetime.fromtimestamp(stats.st_mtime).isoformat()
+            
+            # Find appropriate handler
+            handler = next(
+                (h for h in self.handlers if h.can_handle(path)),
+                None
+            )
+            
+            if handler is None:
+                logger.warning(f"No handler found for file: {file_path}")
+                return
+            
+            # Extract text using handler instance
+            result = handler.extract_text(path)
+            if isinstance(result, tuple):
+                text, metadata = result
+                # Merge handler metadata with our metadata
+                metadatas = [{
+                    **metadata,
+                    "file_path": str(file_path),
+                    "workspace_id": workspace_id,
+                    "importance_level": importance_level,
+                    "created_at": created_at,
+                    "modified_at": modified_at,
+                    "file_type": path.suffix.lower(),
+                    "chunk_index": i
+                } for i in range(len(chunks))]
+            else:
+                text = result
+                metadatas = [{
+                    "file_path": str(file_path),
+                    "workspace_id": workspace_id,
+                    "importance_level": importance_level,
+                    "created_at": created_at,
+                    "modified_at": modified_at,
+                    "file_type": path.suffix.lower(),
+                    "chunk_index": i
+                } for i in range(len(chunks))]
+                
+            if not text:
                 logger.warning(f"Empty file: {file_path}")
                 return
 
@@ -123,19 +161,14 @@ class DocumentProcessor:
 
             # Get collection
             collection = self._get_collection(workspace_id)
+            if not collection:
+                logger.error(f"Failed to get collection for workspace {workspace_id}")
+                return
 
             # Generate embeddings and store in ChromaDB
             logger.debug("Generating embeddings")
             embeddings = self.embeddings.embed_documents(chunks)
             logger.info(f"Generated {len(embeddings)} embeddings")
-
-            # Prepare documents metadata
-            metadatas = [{
-                "file_path": file_path,
-                "workspace_id": workspace_id,
-                "importance_level": importance_level,
-                "chunk_index": i
-            } for i in range(len(chunks))]
 
             # Add documents to collection
             logger.debug("Adding documents to collection")
@@ -160,17 +193,14 @@ class DocumentProcessor:
         self,
         file_path: str,
         workspace_id: str,
-        vector_db_path: str,
         importance_level: ImportanceLevelType = "Medium",
         wait_for_completion: bool = False
     ):
-        """
-        Process any supported document type for RAG.
+        """Process a document and add it to the vector store.
         
         Args:
             file_path: Path to the document to process
             workspace_id: ID of the workspace the document belongs to
-            vector_db_path: Base path for vector database storage
             importance_level: Importance level of the document ("High", "Medium", "Low", "Excluded")
             wait_for_completion: If True, wait for processing to complete before returning
             
@@ -179,41 +209,7 @@ class DocumentProcessor:
             ValueError: If file is too large, unsupported type, or cannot be processed
         """
         try:
-            file_path = Path(file_path)
-            if not file_path.exists():
-                raise FileNotFoundError(f"File not found: {file_path}")
-
-            # Find appropriate handler
-            handler = next(
-                (h for h in self.handlers if h.can_handle(file_path)),
-                None
-            )
-            
-            if handler is None:
-                raise ValueError(f"No handler found for file: {file_path}")
-
-            # Extract text using appropriate handler
-            text_content, metadata = handler.extract_text(file_path)
-            
-            # Add importance level to metadata
-            metadata['importance_level'] = importance_level
-            metadata['workspace_id'] = workspace_id
-            
-            # Process chunks
-            chunks = self.text_splitter.split_text(text_content)
-            
-            # Get collection for workspace
-            collection = self._get_collection(workspace_id)
-            
-            # Add chunks to collection
-            for i, chunk in enumerate(chunks):
-                collection.add(
-                    documents=[chunk],
-                    metadatas=[{**metadata, 'chunk_id': i}],
-                    ids=[f"{file_path.stem}_{i}"]
-                )
-                
-            logger.info(f"Successfully processed file: {file_path}")
+            self._process_file_internal(file_path, workspace_id, importance_level)
             
         except Exception as e:
             logger.error(f"Error processing file {file_path}: {e}")
@@ -225,32 +221,29 @@ class DocumentProcessor:
         query: str,
         workspace_id: str,
         n_results: int = 5,
-        importance_filter: Optional[ImportanceLevelType] = None,
-    ) -> list[dict]:
-        """
-        Search for relevant documents using semantic similarity.
+        where: Dict = None
+    ) -> List[Dict[str, Any]]:
+        """Search for relevant documents using the query.
         
         Args:
             query: The search query
             workspace_id: ID of the workspace to search in
             n_results: Maximum number of results to return
-            importance_filter: Optional filter for document importance level
+            where: Filter conditions for the search
             
         Returns:
             List of dictionaries containing document content and metadata
         """
-        logger.info(f"Searching documents in workspace {workspace_id} with query: {query}")
-        
         try:
-            # Get embeddings for the query
+            # Get collection for workspace
+            collection = self._get_collection(workspace_id)
+            if not collection:
+                logger.error(f"Failed to get collection for workspace {workspace_id}")
+                return []
+            
+            # Generate query embedding
             logger.debug("Generating query embedding")
             query_embedding = self.embeddings.embed_query(query)
-            
-            # Get collection
-            collection = self._get_collection(workspace_id)
-            
-            # Prepare where clause if importance filter is specified
-            where = {"importance_level": importance_filter} if importance_filter else None
             
             # Search in collection
             logger.debug(f"Searching collection with n_results={n_results}")
@@ -276,11 +269,10 @@ class DocumentProcessor:
                     })
                 
                 logger.info(f"Found {len(formatted_results)} matching documents")
-            else:
-                logger.info("No matching documents found")
-            
+                
             return formatted_results
             
         except Exception as e:
-            logger.error(f"Error during document search: {str(e)}")
+            logger.error(f"Error searching documents: {e}")
+            self._error_queue.put(e)
             raise

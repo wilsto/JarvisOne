@@ -3,10 +3,10 @@
 from datetime import datetime
 import uuid
 from sqlalchemy import Column, String, DateTime, Float, ForeignKey, create_engine, Enum
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declarative_base
 from core.workspace_manager import SpaceType
 
+# Use the new declarative_base from sqlalchemy.orm
 Base = declarative_base()
 
 class Conversation(Base):

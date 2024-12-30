@@ -82,6 +82,9 @@ def setup_logging() -> None:
         logger = logging.getLogger(name)
         logger.handlers = []  # Remove existing handlers
         logger.propagate = True  # Use root logger
+    
+    # Suppress specific warnings
+    logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
 
 def get_logs() -> List[dict]:
     """Retrieve logs stored in the session."""

@@ -12,10 +12,16 @@ from sqlalchemy.orm import sessionmaker
 import yaml
 from datetime import datetime
 from typing import Dict
+from rag.document_processor import DocumentProcessor
+from rag.document_watcher.workspace_watcher import WorkspaceWatcherManager
 
 # Configure logging first
 setup_logging()
 ConfigManager.initialize_logging()  # Initialize logging from config
+
+# Suppress Streamlit context warnings
+from utils.streamlit_context import suppress_streamlit_context_warnings
+suppress_streamlit_context_warnings()
 
 def load_app_state() -> Dict:
     """Load application state from configuration file."""
@@ -41,6 +47,19 @@ def initialize_session_state():
     else:
         # Sync current space with workspace manager
         st.session_state.workspace_manager.set_current_space(st.session_state.workspace)
+
+    # Initialize document processor and watcher for coaching workspace
+    if 'doc_processor' not in st.session_state:
+        vector_db_path = Path("data/vector_db")
+        st.session_state.doc_processor = DocumentProcessor(str(vector_db_path))
+        
+    if 'workspace_watcher' not in st.session_state:
+        st.session_state.workspace_watcher = WorkspaceWatcherManager(
+            st.session_state.workspace_manager,
+            st.session_state.doc_processor
+        )
+        # Start watching coaching workspace for MVP
+        st.session_state.workspace_watcher.start_coaching_workspace()
 
     # Initialize cache state
     if 'cache_enabled' not in st.session_state:
