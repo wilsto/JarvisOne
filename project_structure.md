@@ -149,6 +149,31 @@ This document describes the purpose of each directory and file within the Jarvis
     - `markitdown_handler.py`: Handler for Office documents
     - `epub_handler.py`: Handler for EPUB e-books
 
+    ### `src/rag/document_watcher/`
+    
+    - **Purpose**: Monitors file system changes and manages document tracking.
+    
+    - `document_tracker.py`: 
+      - SQLite-based document tracking
+      - Status tracking (pending/processed/error/deleted)
+      - Hash-based change detection
+      - Thread-safe database operations
+    
+    - `watcher.py`:
+      - File system monitoring using Watchdog
+      - Intelligent file scanning with change detection
+      - Only updates documents when:
+        - File is new (not in database)
+        - File has changed (different hash)
+        - File was previously deleted but exists again
+      - Supports workspace isolation
+      - Handles supported file extensions only
+
+    - `workspace_watcher.py`:
+      - Manages workspace-specific file watchers
+      - Coordinates document tracking across workspaces
+      - Handles watcher lifecycle (start/stop)
+
   #### `src/ui/`
 
   - **Purpose**: Implements the Streamlit-based user interface components.

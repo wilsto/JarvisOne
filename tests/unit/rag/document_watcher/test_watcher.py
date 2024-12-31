@@ -135,35 +135,63 @@ class TestFileSystemWatcher:
             watcher.stop()
 
     def test_scan_existing_files(self, temp_dir, mock_doc_processor, mock_doc_tracker):
-        """Test scanning existing files."""
+        """Test scanning existing files with hash checking."""
         # Create some test files
         (temp_dir / "test1.txt").write_text("test1")
         (temp_dir / "test2.md").write_text("test2")
         (temp_dir / "test3.xyz").write_text("test3")  # Unsupported extension
         
-        watcher = FileSystemWatcher(
-            workspace_id="COACHING",
-            paths=[temp_dir],
-            doc_tracker=mock_doc_tracker,
-            doc_processor=mock_doc_processor
-        )
+        # Mock get_document_status to simulate different scenarios
+        def mock_get_status(workspace_id, file_path):
+            if "test1.txt" in file_path:
+                # Existing file with same hash
+                return {
+                    'status': 'processed',
+                    'hash': 'hash_of_test1.txt'
+                }
+            elif "test2.md" in file_path:
+                # Existing file marked as deleted
+                return {
+                    'status': 'deleted',
+                    'hash': 'old_hash'
+                }
+            return None  # New file
+            
+        mock_doc_tracker.get_document_status.side_effect = mock_get_status
         
-        try:
-            # Start the watcher
-            watcher.start()
-            time.sleep(0.1)  # Attendre un peu que le scan soit terminé
+        # Mock the event handler's _get_file_info method
+        with patch('src.rag.document_watcher.watcher.DocumentEventHandler._get_file_info') as mock_get_info:
+            def mock_file_info(file_path):
+                return datetime.now(), f"hash_of_{file_path.name}"
+            mock_get_info.side_effect = mock_file_info
             
-            # Verify only supported files were processed
-            assert mock_doc_tracker.update_document.call_count == 2  # Only .txt and .md files
+            watcher = FileSystemWatcher(
+                workspace_id="COACHING",
+                paths=[temp_dir],
+                doc_tracker=mock_doc_tracker,
+                doc_processor=mock_doc_processor
+            )
             
-            # Get all calls to update_document
-            calls = mock_doc_tracker.update_document.call_args_list
-            processed_files = {
-                call.kwargs['file_path'] for call in calls
-            }
-            
-            assert str(temp_dir / "test1.txt") in processed_files
-            assert str(temp_dir / "test2.md") in processed_files
-            assert str(temp_dir / "test3.xyz") not in processed_files
-        finally:
-            watcher.stop()
+            try:
+                # Start the watcher
+                watcher.start()
+                time.sleep(0.1)  # Wait for scan to complete
+                
+                # Verify only files needing updates were processed
+                assert mock_doc_tracker.update_document.call_count == 1
+                
+                # Verify the correct file was updated (test2.md - previously deleted)
+                call = mock_doc_tracker.update_document.call_args
+                assert "test2.md" in call.kwargs['file_path']
+                assert call.kwargs['status'] == 'pending'
+                assert call.kwargs['hash_value'] == f"hash_of_test2.md"
+                
+                # Verify test1.txt was not updated (same hash)
+                assert not any("test1.txt" in call.kwargs['file_path'] 
+                             for call in mock_doc_tracker.update_document.call_args_list)
+                
+                # Verify test3.xyz was not processed (unsupported)
+                assert not any("test3.xyz" in call.kwargs['file_path']
+                             for call in mock_doc_tracker.update_document.call_args_list)
+            finally:
+                watcher.stop()

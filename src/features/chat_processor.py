@@ -11,7 +11,7 @@ from core.analysis.conversation_analyzer import ConversationAnalyzer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 class ChatProcessor:
     """Main processor for chat interactions."""

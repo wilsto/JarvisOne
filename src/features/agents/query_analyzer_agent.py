@@ -8,7 +8,7 @@ from .confidence_verifier_agent import agent as confidence_verifier_agent
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 AGENT_SELECTION_PROMPT = """You are AgentMatcher, a precise agent selector that must analyze queries and provide THREE pieces of information:
 1. The selected agent name (EXACTLY one of: file_search_agent, feynman_agent, chat_agent)

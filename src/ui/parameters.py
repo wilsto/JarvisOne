@@ -74,14 +74,14 @@ def display_parameters():
 
     # Load initial preferences
     preferences = ConfigManager.load_llm_preferences()
-    logger.info(f"Loading preferences: {preferences}")
+    logger.debug(f"Loading preferences: {preferences}")
     
     # Initialize provider selection
     provider_options = list(LLM_PROVIDERS.keys())
     current_provider = preferences["provider"]
     current_index = provider_options.index(current_provider)
         
-    logger.info(f"Rendering provider select with current={current_provider}, index={current_index}")
+    logger.debug(f"Rendering provider select with current={current_provider}, index={current_index}")
     
     st.subheader("LLM Provider")
     
@@ -109,7 +109,7 @@ def display_parameters():
         
     model_index = models.index(current_model) if current_model in models else 0
     
-    logger.info(f"Rendering model select with current={current_model}, index={model_index}")
+    logger.debug(f"Rendering model select with current={current_model}, index={model_index}")
     
     st.markdown("Model:", help="Select the model to use")
     selected_model = st.selectbox(

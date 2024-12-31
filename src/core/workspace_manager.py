@@ -10,7 +10,7 @@ from .prompts.generic_prompts import build_system_prompt
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 class SpaceType(Enum):
     """Enumeration of available workspaces."""

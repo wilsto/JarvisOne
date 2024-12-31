@@ -71,7 +71,7 @@ class DocumentProcessor:
     def _get_chroma_client(self) -> chromadb.Client:
         """Get or create a ChromaDB client."""
         if self._client is None:
-            logger.info("Creating new ChromaDB client")
+            logger.debug("Creating new ChromaDB client")
             self.vector_db_path.mkdir(parents=True, exist_ok=True)
             
             self._client = chromadb.PersistentClient(
@@ -135,7 +135,7 @@ class DocumentProcessor:
             # Split text into chunks
             logger.debug("Splitting text into chunks")
             chunks = self.text_splitter.split_text(text)
-            logger.info(f"Generated {len(chunks)} chunks")
+            logger.debug(f"Generated {len(chunks)} chunks")
             
             if not chunks:
                 logger.warning(f"No chunks generated from {file_path}")
@@ -162,7 +162,7 @@ class DocumentProcessor:
             # Generate embeddings and store in ChromaDB
             logger.debug("Generating embeddings")
             embeddings = self.embeddings.embed_documents(chunks)
-            logger.info(f"Generated {len(embeddings)} embeddings")
+            logger.debug(f"Generated {len(embeddings)} embeddings")
 
             # Generate unique document IDs using full path hash
             file_path_hash = hashlib.sha256(str(file_path).encode()).hexdigest()[:8]
@@ -173,7 +173,7 @@ class DocumentProcessor:
                 # First try exact IDs
                 existing_docs = collection.get(ids=doc_ids)
                 if existing_docs and existing_docs['ids']:
-                    logger.info(f"Found {len(existing_docs['ids'])} existing chunks for {file_path}, removing them")
+                    logger.debug(f"Found {len(existing_docs['ids'])} existing chunks for {file_path}, removing them")
                     collection.delete(ids=existing_docs['ids'])
                 
                 # Then check for any chunks from this file using metadata
@@ -184,7 +184,7 @@ class DocumentProcessor:
                     ]}
                 )
                 if existing_by_path and existing_by_path['ids']:
-                    logger.info(f"Found {len(existing_by_path['ids'])} additional chunks by path, removing them")
+                    logger.debug(f"Found {len(existing_by_path['ids'])} additional chunks by path, removing them")
                     collection.delete(ids=existing_by_path['ids'])
             except Exception as e:
                 logger.warning(f"Error checking existing documents: {e}")

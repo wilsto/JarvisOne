@@ -143,17 +143,52 @@ class FileSystemWatcher:
             self.observer = None
             
     def scan_existing_files(self):
-        """Scan existing files in directory."""
+        """Scan existing files in directory and update document tracker.
+        
+        Only updates a file to 'pending' if:
+        - File is new (not in database)
+        - File has changed (different hash)
+        - File was previously marked as 'deleted' but exists again
+        """
+        handler = DocumentEventHandler(
+            workspace_id=self.workspace_id,
+            doc_tracker=self.doc_tracker,
+            doc_processor=self.doc_processor
+        )
+        
         for path in self.paths:
             if not path.exists():
-                logger.error(f"Directory does not exist: {path}")
+                logger.warning(f"Path {path} does not exist, skipping")
                 continue
                 
             for file_path in path.rglob('*'):
-                if (file_path.is_file() and 
-                    file_path.suffix.lower() in self.doc_processor.handlers[0].SUPPORTED_EXTENSIONS):
-                    self.doc_tracker.update_document(
-                        workspace_id=self.workspace_id,
-                        file_path=str(file_path),
-                        status='pending'
-                    )
+                if file_path.is_file() and handler._should_process(file_path):
+                    try:
+                        # Get current file info
+                        mtime, current_hash = handler._get_file_info(file_path)
+                        
+                        # Check existing status
+                        doc_status = self.doc_tracker.get_document_status(
+                            workspace_id=self.workspace_id,
+                            file_path=str(file_path)
+                        )
+                        
+                        should_update = (
+                            doc_status is None or  # New file
+                            doc_status['status'] == 'deleted' or  # Previously deleted
+                            doc_status['hash'] != current_hash  # File changed
+                        )
+
+                        logger.info(f"Should update: {should_update}, Doc status: {doc_status}")
+                        
+                        if should_update:
+                            self.doc_tracker.update_document(
+                                workspace_id=self.workspace_id,
+                                file_path=str(file_path),
+                                status='pending',
+                                hash_value=current_hash,
+                                last_modified=mtime
+                            )
+                    except Exception as e:
+                        logger.error(f"Error processing {file_path}: {e}")
+                        continue

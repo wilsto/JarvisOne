@@ -14,7 +14,7 @@ from core.core_agent import CoreAgent
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 # Get the project root directory and construct the absolute path
 project_root = Path(__file__).parent.parent.parent.parent

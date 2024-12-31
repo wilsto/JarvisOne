@@ -62,10 +62,19 @@ class DocumentChangeProcessor(StreamlitThread):
                             file_path=str(file_path),
                             workspace_id=self.workspace_id
                         )
+                        
+                        # Get document info to preserve hash
+                        doc_info = self.doc_tracker.get_document_status(
+                            self.workspace_id,
+                            str(file_path)
+                        )
+                        
+                        # Update status while preserving hash
                         self.doc_tracker.update_document(
                             self.workspace_id,
                             str(file_path),
-                            status='processed'
+                            status='processed',
+                            hash_value=doc_info['hash'] if doc_info else None
                         )
                         logger.info(f"Successfully processed document: {file_path}")
                         

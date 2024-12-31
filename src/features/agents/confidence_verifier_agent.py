@@ -7,7 +7,7 @@ from core.core_agent import CoreAgent
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 CONFIDENCE_VERIFIER_PROMPT = """You are a Confidence Verifier that must provide TWO pieces of information:
 1. A confidence score (number between 0-100)

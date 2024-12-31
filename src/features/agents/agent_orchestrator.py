@@ -15,7 +15,7 @@ from pathlib import Path
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 class AgentOrchestrator:
     """Orchestrates the routing of queries to appropriate agents."""
