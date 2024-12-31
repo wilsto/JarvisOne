@@ -1,0 +1,83 @@
+@startuml chatbox
+|#lightblue|UI|
+start
+:Saisie de la Conversation;
+|#pink|WorkspaceManager|
+:Charge la Configuration du Workspace;
+:workspace_manager.get_current_space_config()
+Charge les paramètres du workspace actif;
+:workspace_manager.get_current_context_prompt()
+Récupère le prompt système et le rôle;
+|#lightblue|UI|
+:chat_ui.py: display_chat() 
+Capture l'entrée utilisateur via st.chat_input();
+|#lightcoral|ChatProcessor|
+:Traitement de la Saisie;
+:ChatProcessor.process_user_input()
+Combine l'historique avec l'entrée via _combine_history_with_input();
+:Récupère workspace_id et role_id du WorkspaceManager;
+:Appelle orchestrator.process_query() avec l'entrée combinée;
+|#lightsalmon|AgentOrchestrator|
+:Routage de la Requête;
+:AgentOrchestrator.process_query()
+Sélectionne l'agent approprié;
+if (RAG Enabled?) then (yes)
+  :Enhance agent with RAGEnhancer;
+  note right
+    RAGEnhancer utilise:
+    - workspace_id pour la collection
+    - role pour le filtrage
+  end note
+endif
+:Appelle agent.run() sur l'agent sélectionné;
+|#lightgreen|CoreAgent|
+:Génération de la Réponse;
+:CoreAgent.run()
+Construit le prompt via _build_prompt();
+note right
+  _build_prompt combine:
+  1. Workspace system prompt
+  2. Role-specific prompt
+  3. User query
+end note
+|#lightpink|RAGQueryHandler|
+:Recherche de Contexte;
+:RAGQueryHandler.query()
+Recherche les documents pertinents
+Filtre par workspace_id et importance;
+note right
+  Query utilise:
+  - Collection du workspace
+  - Filtres du rôle
+  - Paramètres d'importance
+end note
+:Retourne le contexte trouvé;
+|#lightgreen|CoreAgent|
+:Combine le contexte RAG avec le prompt;
+:Appelle le LLM pour générer la réponse;
+|#lightcoral|ChatProcessor|
+:Sauvegarde la conversation;
+:Mise à jour des métadonnées
+(workspace, role, timestamp);
+|#lightyellow|InteractionHandler|
+:Gestion des Interactions;
+:InteractionDisplayFactory
+Sélectionne le handler approprié;
+note right
+  Handlers par type:
+  - Chat: Affiche messages
+  - Search: Résultats de recherche
+  - Config: Changements config
+  - Tools: Résultats outils
+end note
+:Handler.display()
+Affiche l'interaction dans l'UI;
+|#lightblue|UI|
+:Affichage dans le panneau d'interactions;
+note right
+  - Expander avec titre
+  - Contenu formaté
+  - Actions contextuelles
+end note
+stop
+@enduml

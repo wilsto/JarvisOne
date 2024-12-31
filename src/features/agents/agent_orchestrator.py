@@ -10,6 +10,7 @@ from rag.enhancer import RAGEnhancer
 from rag.document_processor import DocumentProcessor
 from rag.middleware import RAGConfig
 from rag.processor import MessageProcessor
+from rag.query_handler import RAGQueryHandler
 from .query_analyzer_agent import agent as query_analyzer_agent
 from pathlib import Path
 
@@ -46,9 +47,7 @@ class AgentOrchestrator:
         if config.get("rag", {}).get("enabled", False):
             logger.info("RAG is enabled, initializing components")
             self.rag_config = RAGConfig(**config["rag"]["config"])
-            self.document_processor = DocumentProcessor(
-                vector_db_path=str(Path(config.get("data_dir", "data")) / "vector_db")
-            )
+            self.document_processor = DocumentProcessor()
         
         self.query_analyzer = query_analyzer_agent
         self.available_agents = self._load_agents()
@@ -89,6 +88,10 @@ class AgentOrchestrator:
             Dictionary of agent name to agent instance
         """
         available_agents = {}
+        config = ConfigManager.get_all_configs()
+        vector_db_path = str(Path(config.get("data_dir", "data")) / "vector_db")
+        logger.info(f"Loading agents with vector_db_path: {vector_db_path}")
+        
         package = importlib.import_module("features.agents")
         for _, name, is_package in pkgutil.walk_packages(package.__path__):
             if not is_package and name != "__init__":
@@ -96,10 +99,12 @@ class AgentOrchestrator:
                 for item_name in module.__dict__.keys():
                      item = module.__dict__[item_name]
                      if isinstance(item, CoreAgent):
-                        # Pass shared LLM instance and workspace_manager to agent
+                        # Pass shared LLM instance, workspace_manager and vector_db_path to agent
                         item.llm = self.llm
                         item.workspace_manager = self.workspace_manager
+                        item.rag_handler = RAGQueryHandler(vector_db_path) if config.get("rag", {}).get("enabled", False) else None
                         agent_name = name.replace("_agent", "")
+                        logger.info(f"Initialized agent {agent_name} with RAG: {item.rag_handler is not None}")
                         available_agents[agent_name] = self._enhance_agent_if_needed(
                             agent_name, item
                         )
@@ -133,13 +138,18 @@ class AgentOrchestrator:
             agent.llm = self.llm
         logger.info("Updated LLM model for all agents")
 
-    def process_query(self, user_query: str) -> Dict[str, Any]:
+    def process_query(self, user_query: str, workspace_id: str = None, role_id: str = None) -> Dict[str, Any]:
         """Process a user query through the appropriate agent."""
         try:
             agent = self._select_agent(user_query)
-            logger.info(f"Selected agent: {agent.agent_name}")
-            response = agent.run(user_query)
-            #logger.info(f"Response from agent '{agent.agent_name}': {response}")
+            logger.info(f"Selected agent: {agent.agent_name} for workspace={workspace_id}, role={role_id}")
+            
+            # Pass context to agent
+            response = agent.run(
+                user_query,
+                workspace_id=workspace_id,
+                role_id=role_id
+            )
             return response
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}", exc_info=True)

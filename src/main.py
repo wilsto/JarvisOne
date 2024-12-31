@@ -17,6 +17,7 @@ from rag.document_processor import DocumentProcessor
 from rag.document_watcher.workspace_watcher import WorkspaceWatcherManager
 import os
 import logging
+import atexit
 
 # Configure logging first
 setup_logging()
@@ -44,6 +45,7 @@ def initialize_session_state():
     """Initialize session state with default values if not already set."""
     # Load app state
     app_state = load_app_state()
+    config = ConfigManager._load_config()
     
     # Initialize workspace first
     if 'workspace' not in st.session_state:
@@ -58,8 +60,7 @@ def initialize_session_state():
 
     # Initialize document processor and watcher for coaching workspace
     if 'doc_processor' not in st.session_state:
-        vector_db_path = Path("data/vector_db")
-        st.session_state.doc_processor = DocumentProcessor(str(vector_db_path))
+        st.session_state.doc_processor = DocumentProcessor()
         
     if 'workspace_watcher' not in st.session_state:
         st.session_state.workspace_watcher = WorkspaceWatcherManager(
@@ -176,11 +177,8 @@ def display_interactions():
 
 def create_agent(agent_type: str) -> CoreAgent:
     """Create and initialize an agent with the current workspace."""
-    agent = CoreAgent(
-        agent_name=agent_type,
-        system_instructions=f"You are a {agent_type} agent.",  # Simple instructions for now
-        workspace_manager=st.session_state.workspace_manager
-    )
+    logger.info(f"Initializing agent type: {agent_type}")
+    agent = CoreAgent(agent_type, st.session_state.workspace_manager)
     return agent
 
 def save_app_state(space_type: SpaceType):
@@ -308,6 +306,19 @@ initialize_session_state()
 
 # Initialize chat session after workspace initialization
 init_chat_session()
+
+def cleanup_resources():
+    """Clean up resources before shutdown."""
+    try:
+        if 'doc_processor' in st.session_state:
+            # Close VectorDBManager
+            st.session_state.doc_processor.vector_db.close()
+            logger.info("VectorDBManager closed successfully")
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
+
+# Register cleanup function
+atexit.register(cleanup_resources)
 
 if __name__ == "__main__":
     # Create two main columns with ratio 2:1

@@ -7,6 +7,7 @@ import logging
 from typing import List
 from pathlib import Path
 from rag.processor import MessageProcessor
+from rag.query_handler import RAGQueryHandler
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,8 @@ class CoreAgent(MessageProcessor):
     def __init__(self, agent_name: str, system_instructions: str, 
                  tools: list = None, output_formatter: callable = None,
                  interactions: callable = None,
-                 llm: LLM = None, workspace_manager: WorkspaceManager = None):
+                 llm: LLM = None, workspace_manager: WorkspaceManager = None,
+                 rag_enabled: bool = False):
         """
         Initialise un CoreAgent.
 
@@ -39,33 +41,106 @@ class CoreAgent(MessageProcessor):
             interactions: Fonction optionnelle pour gérer les interactions UI.
             llm : instance du LLM utilisé par l'agent
             workspace_manager: instance du gestionnaire d'espace de travail
+            rag_enabled: Enable RAG functionality
         """
         self.agent_name = agent_name
         self.system_instructions = system_instructions
+        self.system_prompt = system_instructions
         self.tools = tools if tools else []
         self.output_formatter = output_formatter
         self.interactions = interactions
         self.llm = llm if llm else ManagedLLM()
         self.workspace_manager = workspace_manager
+        
+        # Initialize RAG handler with logging
+        if rag_enabled:
+            logger.info("Initializing RAG handler")
+            try:
+                self.rag_handler = RAGQueryHandler()
+                # Test collection access
+                if workspace_manager and workspace_manager.current_space:
+                    workspace_id = workspace_manager.current_space.name
+                    collection = self.rag_handler._get_collection(workspace_id)
+                    if collection:
+                        logger.info(f"Successfully accessed collection for workspace: {workspace_id}")
+                    else:
+                        logger.warning(f"No collection found for workspace: {workspace_id}")
+            except Exception as e:
+                logger.error(f"Failed to initialize RAG handler: {str(e)}", exc_info=True)
+                self.rag_handler = None
+        else:
+            logger.info("RAG functionality is disabled")
+            self.rag_handler = None
 
-    def _build_prompt(self, user_query: str) -> str:
-        """Construit le prompt pour le LLM."""
+    def _get_rag_context(self, query: str, workspace_id: str, role_id: str = None) -> str:
+        """Get relevant context from RAG system."""
+        if not self.rag_handler:
+            logger.warning("No RAG handler available")
+            return ""
+            
+        try:
+            logger.info(f"Getting RAG context for query: {query[:50]}... in workspace: {workspace_id}")
+            
+            # Query RAG system with workspace and role context
+            results = self.rag_handler.query(
+                query, 
+                workspace_id=workspace_id,
+                role_id=role_id
+            )
+            
+            if not results:
+                logger.warning(f"No RAG results found for workspace {workspace_id}")
+                return ""
+                
+            # Format context
+            context_parts = []
+            for result in results:
+                content = result.get('content', '')
+                metadata = result.get('metadata', {})
+                source = metadata.get('file_path', 'unknown source')
+                logger.info(f"Found RAG content from {source}")
+                context_parts.append(f"From {source}:\n{content}")
+                
+            if not context_parts:
+                return ""
+                
+            formatted_context = "\n\n".join(context_parts)
+            logger.info(f"RAG context built successfully with {len(context_parts)} documents")
+            return formatted_context
+            
+        except Exception as e:
+            logger.error(f"Error getting RAG context: {str(e)}", exc_info=True)
+            return ""
+
+    def _build_prompt(self, user_query: str, workspace_id: str = None, role_id: str = None) -> str:
+        """Build the prompt for the LLM."""
         prompt_parts = []
         
-        # Ajouter le system prompt du workspace s'il existe
-        if self.workspace_manager:
-            context_prompt = self.workspace_manager.get_current_context_prompt()
-            prompt_parts.append(context_prompt)
-        else:
-            logger.warning("No workspace_manager available, using base prompt only")
+        # Add system prompt
+        prompt_parts.append("=== System Instructions ===")
+        if self.system_prompt:
+            prompt_parts.append(self.system_prompt)
+            
+        # Add workspace context if available
+        prompt_parts.append("=== Workspace Context ===")
+        if workspace_id and self.workspace_manager:
+            workspace_context = self.workspace_manager.get_current_context_prompt()
+            if workspace_context:
+                prompt_parts.append(workspace_context)
+
+
+        # Add RAG context if available
+        prompt_parts.append("=== RAG Context ===")
+        if workspace_id and self.rag_handler:
+            rag_context = self._get_rag_context(user_query, workspace_id, role_id)
+            if rag_context:
+                prompt_parts.append(rag_context)
         
-        # Ajouter les instructions système de l'agent
-        prompt_parts.append(self.system_instructions)
+        # Add user query
+        prompt_parts.append("=== User Query ===")
+        prompt_parts.append(user_query)
         
-        # Ajouter la requête utilisateur
-        prompt_parts.append(f"User Query: {user_query}")
-        
-        # Combiner tous les éléments avec des sauts de ligne
+        # Combine all parts with double line breaks
         return "\n\n".join(prompt_parts)
 
     def _handle_interaction(self, query: str, results: any) -> str:
@@ -104,18 +179,22 @@ class CoreAgent(MessageProcessor):
             return self.workspace_manager.get_space_paths()
         return []
 
-    def run(self, user_query: str) -> dict:
+    def run(self, user_query: str, workspace_id: str = None, role_id: str = None) -> dict:
         """
         Exécute l'agent.
 
         Args:
             user_query: La requête de l'utilisateur.
+            workspace_id: ID of the current workspace
+            role_id: ID of the current role
 
         Returns:
             Un dictionnaire contenant la réponse de l'agent.
         """
-        # On construit le prompt pour le LLM
-        prompt = self._build_prompt(user_query)
+        logger.info(f"Running agent with workspace_id={workspace_id}, role_id={role_id}")
+        
+        # Build prompt with all context
+        prompt = self._build_prompt(user_query, workspace_id, role_id)
         logger.info(f"##DEBUG## Using final prompt: {prompt}...")
         
         # On demande au LLM de générer une réponse

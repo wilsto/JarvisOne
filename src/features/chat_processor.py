@@ -134,11 +134,18 @@ class ChatProcessor:
     def process_user_input(self, user_input: str) -> str:
         """Process user input through the orchestrator and return formatted response."""
         try:
+            # Get current workspace and role info
+            workspace = getattr(st.session_state, 'workspace', None)
+            workspace_id = workspace.name if workspace else None
+            role_id = getattr(st.session_state, 'current_role', None)
+            
+            logger.info(f"Processing input with workspace={workspace}, workspace_id={workspace_id}, role_id={role_id}")
+            
             # Create conversation if this is the first interaction
             if st.session_state.current_conversation_id is None:
                 # Extract initial title from first message
                 initial_title = self.analyzer.extract_title([{"role": "user", "content": user_input}])
-                workspace = getattr(st.session_state, 'pending_workspace', st.session_state.workspace)
+                workspace = getattr(st.session_state, 'pending_workspace', workspace)
                 conversation = self.repository.create_conversation(title=initial_title, workspace=workspace)
                 st.session_state.current_conversation_id = conversation.id
                 if hasattr(st.session_state, 'pending_workspace'):
@@ -148,8 +155,12 @@ class ChatProcessor:
             # Combine history with input
             combined_input = self._combine_history_with_input(user_input)
             
-            # Process through orchestrator
-            response = self.orchestrator.process_query(combined_input)
+            # Process through orchestrator with context
+            response = self.orchestrator.process_query(
+                combined_input,
+                workspace_id=workspace_id,
+                role_id=role_id
+            )
             
             return self._format_response(response)
             

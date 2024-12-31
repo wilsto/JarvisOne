@@ -3,6 +3,7 @@ app_state:
   notification_enabled: true
   role: Coach
   workspace: COACHING
+data_dir: data
 llm:
   default_model: mistral:latest
   default_provider: Ollama (Local)
@@ -16,10 +17,13 @@ logging:
   max_log_entries: 1000
 rag:
   agents:
+  - chat_agent
+  - file_search_agent
   - chat
   config:
     importance_filter: High
     max_results: 3
+    max_tokens: 4000
     min_similarity: 0.7
   document_processing:
     max_file_size_mb: 10
@@ -33,11 +37,21 @@ rag:
     - .md
     - .json
   enabled: true
-  vector_db:
-    path: data/vector_db
 tools:
   everything:
     cli_path: C:\Program Files\Everything\es.exe
     gui_path: C:\Program Files\Everything\Everything.exe
 ui:
   theme: default
+vector_db:
+  collection_prefix: workspace_
+  collection_settings:
+    chunk_overlap: 200
+    chunk_size: 1000
+    distance_metric: cosine
+    embedding_function: sentence-transformers/all-MiniLM-L6-v2
+  monitoring:
+    log_queries: true
+    metrics_enabled: true
+    performance_threshold_ms: 1000
+  path: data/vector_db
