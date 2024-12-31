@@ -1,7 +1,7 @@
 """Tests for the ConfigManager class."""
 
 import os
-import json
+import yaml
 import pytest
 from pathlib import Path
 from unittest.mock import patch, mock_open
@@ -11,48 +11,52 @@ from src.core.config_manager import ConfigManager
 def mock_config_file(tmp_path):
     """Create a temporary config file."""
     original_config = ConfigManager.CONFIG_FILE
-    ConfigManager.CONFIG_FILE = str(tmp_path / "llm_preferences.json")
+    ConfigManager.CONFIG_FILE = str(tmp_path / "config.yaml")
     yield ConfigManager.CONFIG_FILE
     ConfigManager.CONFIG_FILE = original_config
 
 def test_save_llm_preferences(mock_config_file):
     """Test saving LLM preferences."""
-    ConfigManager.save_llm_preferences("OpenAI", "gpt-4")
+    ConfigManager.save_llm_preferences("Ollama (Local)", "mistral:latest")
     
     with open(mock_config_file, "r", encoding="utf-8") as f:
-        preferences = json.load(f)
+        config = yaml.safe_load(f)
+        preferences = config.get("llm", {})
         
     assert preferences == {
-        "provider": "OpenAI",
-        "model": "gpt-4"
+        "provider": "Ollama (Local)",
+        "model": "mistral:latest"
     }
 
 def test_save_llm_preferences_error():
     """Test error handling when saving LLM preferences."""
     with patch("builtins.open", mock_open()) as mock_file:
         mock_file.side_effect = Exception("Write error")
-        ConfigManager.save_llm_preferences("OpenAI", "gpt-4")
+        ConfigManager.save_llm_preferences("Ollama (Local)", "mistral:latest")
         # Should log error but not raise exception
 
 def test_load_llm_preferences_existing(mock_config_file):
     """Test loading existing LLM preferences."""
     # Create test preferences
-    test_preferences = {
-        "provider": "Anthropic",
-        "model": "claude-2"
+    test_config = {
+        "llm": {
+            "provider": "Ollama (Local)",
+            "model": "mistral:latest"
+        }
     }
     with open(mock_config_file, "w", encoding="utf-8") as f:
-        json.dump(test_preferences, f)
+        yaml.safe_dump(test_config, f)
     
     preferences = ConfigManager.load_llm_preferences()
-    assert preferences == test_preferences
+    assert preferences == test_config["llm"]
 
 def test_load_llm_preferences_missing_file():
     """Test loading preferences with missing file."""
-    with patch("os.path.exists") as mock_exists:
-        mock_exists.return_value = False
-        preferences = ConfigManager.load_llm_preferences()
-        
+    # Use a non-existent path
+    ConfigManager.CONFIG_FILE = "non_existent.yaml"
+    preferences = ConfigManager.load_llm_preferences()
+    
+    # Should return default values
     assert preferences == {
         "provider": "Ollama (Local)",
         "model": "mistral:latest"

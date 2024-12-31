@@ -1,7 +1,6 @@
 name: Work
 paths:
   - "${WORKSPACE_WORK_PATH}"
-#FIXME:work path  
 metadata:
   description: "Espace de connaissances Work"
   context: "professionnel"

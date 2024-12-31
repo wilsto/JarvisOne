@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime
+from datetime import timezone as tz
 from pathlib import Path
 from typing import List, Optional, Dict
 
@@ -78,7 +79,7 @@ class ConversationRepository:
             # Update conversation last_timestamp
             conversation = db.query(Conversation).filter_by(id=conversation_id).first()
             if conversation:
-                conversation.last_timestamp = datetime.utcnow()
+                conversation.last_timestamp = datetime.now(tz.utc)
             
             db.commit()
             db.refresh(message)

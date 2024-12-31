@@ -248,6 +248,15 @@ class OllamaLLM(LLM):
             logger.error(f"Ollama API request error: {str(e)}")
             raise
 
+def _fallback_to_ollama(system_prompt: Optional[str] = None) -> LLM:
+    """Fallback vers Ollama en cas d'erreur."""
+    st.session_state.llm_provider = "Ollama (Local)"
+    st.session_state.llm_model = "mistral:latest"
+    llm = OllamaLLM("mistral:latest")
+    if system_prompt:
+        llm.system_prompt = system_prompt
+    return llm
+
 def get_llm_model() -> LLM:
     """
     Récupère une instance du modèle LLM configuré.
@@ -276,6 +285,7 @@ def get_llm_model() -> LLM:
     else:
         workspace_manager = WorkspaceManager(Path("config"))
         system_prompt = workspace_manager.get_current_context_prompt() 
+    
     # Initialize the model
     provider = st.session_state.llm_provider
     model = st.session_state.llm_model
@@ -290,6 +300,7 @@ def get_llm_model() -> LLM:
         elif provider == "Ollama (Local)":
             llm = OllamaLLM(model or DEFAULT_PARAMS['default_models']['Ollama (Local)'])
         else:
+            logger.error(f"Unknown provider: {provider}")
             raise ValueError(f"Unknown provider: {provider}")
         
         # Set the system prompt if available
@@ -297,7 +308,15 @@ def get_llm_model() -> LLM:
             llm.system_prompt = system_prompt
         
         return llm
+        
+    except ValueError as e:
+        if "Unknown provider" in str(e):
+            # Propager l'erreur de provider invalide
+            raise
+        else:
+            # Pour les autres ValueError (comme API key invalide), faire un fallback
+            logger.error(f"Error initializing {provider} LLM: {e}")
+            return _fallback_to_ollama(system_prompt)
     except Exception as e:
         logger.error(f"Error initializing {provider} LLM: {e}")
-        # Fallback to a default model
-        return OllamaLLM(OLLAMA_DEFAULT_MODELS[0])
+        return _fallback_to_ollama(system_prompt)

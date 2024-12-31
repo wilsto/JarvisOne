@@ -3,7 +3,7 @@
 import pytest
 import logging
 from unittest.mock import Mock, patch
-from src.features.agents.query_analyzer_agent import agent, analyze_query_tool
+from src.features.agents.query_analyzer_agent import QueryAnalyzerAgent
 
 @pytest.fixture
 def mock_llm():
@@ -11,89 +11,105 @@ def mock_llm():
     mock = Mock()
     return mock
 
-def test_query_analyzer_initialization():
+@pytest.fixture
+def agent():
+    """Create a test agent instance."""
+    return QueryAnalyzerAgent()
+
+def test_query_analyzer_initialization(agent):
     """Test l'initialisation de l'agent d'analyse."""
-    from features.agents.query_analyzer_agent import agent
-    
     assert agent is not None
     assert agent.agent_name == "Query Analyzer Agent"
-    assert "query analyzer" in agent.system_instructions[0].lower()
+    assert "agentmatcher" in agent.system_instructions.lower()
     assert len(agent.tools) == 0  # No tools needed for this agent
 
-def test_analyze_query_file_search():
+@patch('src.features.agents.confidence_verifier_agent.agent.verify_confidence')
+def test_analyze_query_file_search(mock_verify, agent, mock_llm):
     """Test query analysis for file search queries."""
-    mock = Mock()
+    # Mock the confidence verifier
+    mock_verify.return_value = (90, "high", "Good match for file search")
+    
     test_cases = [
-        ("cherche un fichier python", "file_search_agent"),
-        ("trouve les fichiers modifiés aujourd'hui", "file_search_agent"),
-        ("liste les .txt", "file_search_agent"),
-        ("search for python files", "file_search_agent"),
-        ("fichiers créés hier", "file_search_agent")
+        (
+            "cherche un fichier python",
+            "file_search_agent\nConfidence: 95\nReason: Query explicitly asks to find python files"
+        ),
+        (
+            "trouve les fichiers modifiés aujourd'hui",
+            "file_search_agent\nConfidence: 90\nReason: Query about finding modified files"
+        )
     ]
     
-    for query, expected in test_cases:
-        mock.generate_response.return_value = expected
-        result = analyze_query_tool(query, mock)
-        assert result == expected
+    for query, llm_response in test_cases:
+        mock_llm.generate_response.return_value = llm_response
+        agent.llm = mock_llm
+        
+        result = agent.analyze_query(query)
+        
+        # Verify result is a string and matches expected agent
+        assert isinstance(result, str)
+        assert result == "file_search_agent"
         
         # Verify LLM was called with correct prompt
-        prompt = mock.generate_response.call_args[0][0]
+        prompt = mock_llm.generate_response.call_args[0][0]
         assert query in prompt
-        assert "file_search_agent" in prompt
-        assert "chat_agent" in prompt
-        mock.generate_response.reset_mock()
+        assert "file_search_agent" in prompt.lower()
+        assert "chat_agent" in prompt.lower()
+        mock_llm.generate_response.reset_mock()
 
-def test_analyze_query_chat():
+@patch('src.features.agents.confidence_verifier_agent.agent.verify_confidence')
+def test_analyze_query_chat(mock_verify, agent, mock_llm):
     """Test query analysis for chat queries."""
-    mock = Mock()
-    test_cases = [
-        ("explique-moi python", "chat_agent"),
-        ("quelle est la météo ?", "chat_agent"),
-        ("comment vas-tu ?", "chat_agent"),
-        ("aide-moi avec git", "chat_agent")
-    ]
+    # Mock the confidence verifier
+    mock_verify.return_value = (80, "medium", "General chat query")
     
-    for query, expected in test_cases:
-        mock.generate_response.return_value = expected
-        result = analyze_query_tool(query, mock)
-        assert result == expected
-        
-        # Verify LLM was called with correct prompt
-        prompt = mock.generate_response.call_args[0][0]
-        assert query in prompt
-        mock.generate_response.reset_mock()
+    query = "comment vas-tu?"
+    llm_response = "chat_agent\nConfidence: 80\nReason: Simple conversational query"
+    
+    mock_llm.generate_response.return_value = llm_response
+    agent.llm = mock_llm
+    
+    result = agent.analyze_query(query)
+    
+    # Verify result is a string and matches expected agent
+    assert isinstance(result, str)
+    assert result == "chat_agent"
 
-def test_analyze_query_invalid_response():
+@patch('src.features.agents.confidence_verifier_agent.agent.verify_confidence')
+def test_analyze_query_invalid_response(mock_verify, agent, mock_llm):
     """Test query analysis with invalid LLM response."""
-    mock = Mock()
-    test_cases = [
-        "invalid_agent",
-        "unknown",
-        "",
-        "test_agent",
-        "none"
-    ]
+    # Mock the confidence verifier
+    mock_verify.return_value = (50, "low", "Invalid response format")
     
-    for invalid_response in test_cases:
-        mock.generate_response.return_value = invalid_response
-        result = analyze_query_tool("test query", mock)
-        assert result == "chat_agent"  # Should default to chat_agent
-        mock.generate_response.reset_mock()
+    # Test invalid response format
+    mock_llm.generate_response.return_value = "invalid format response"
+    agent.llm = mock_llm
+    
+    result = agent.analyze_query("test query")
+    
+    # Should default to chat_agent
+    assert isinstance(result, str)
+    assert result == "chat_agent"
 
-def test_analyze_query_logging(caplog):
+@patch('src.features.agents.confidence_verifier_agent.agent.verify_confidence')
+def test_analyze_query_logging(mock_verify, agent, mock_llm, caplog):
     """Test logging in query analyzer."""
-    mock = Mock()
-    query = "test query"
+    # Mock the confidence verifier
+    mock_verify.return_value = (90, "high", "Good match")
     
-    # Test successful case
-    mock.generate_response.return_value = "chat_agent"
-    with caplog.at_level(logging.INFO):
-        analyze_query_tool(query, mock)
-    assert "Agent selected: 'chat_agent'" in caplog.text
+    # Set up logging capture
+    caplog.set_level(logging.INFO)
     
-    # Test warning case
-    caplog.clear()
-    mock.generate_response.return_value = "invalid_agent"
-    with caplog.at_level(logging.WARNING):
-        analyze_query_tool(query, mock)
-    assert "Agent non reconnu" in caplog.text
+    # Test query
+    query = "cherche un fichier"
+    llm_response = "file_search_agent\nConfidence: 90\nReason: File search query"
+    
+    mock_llm.generate_response.return_value = llm_response
+    agent.llm = mock_llm
+    
+    result = agent.analyze_query(query)
+    
+    # Verify logging
+    assert any("Query:" in record.message for record in caplog.records)
+    assert any("file_search_agent" in record.message for record in caplog.records)
+    assert any("90" in record.message for record in caplog.records)

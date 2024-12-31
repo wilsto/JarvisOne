@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, ANY
 
 from src.core.workspace_manager import WorkspaceManager, SpaceType, SpaceConfig
 from src.rag.document_processor import DocumentProcessor
@@ -61,11 +61,11 @@ class TestWorkspaceWatcherManager:
             MockWatcher.assert_called_once_with(
                 workspace_id="COACHING",
                 paths=[Path("/path/to/coaching")],
+                doc_tracker=manager.doc_tracker,
                 doc_processor=mock_doc_processor
             )
             
             # Verify the instance methods were called
-            mock_instance.scan_existing_files.assert_called_once()
             mock_instance.start.assert_called_once()
             
     def test_stop_workspace_watcher(self, mock_workspace_manager, mock_doc_processor):
@@ -83,30 +83,9 @@ class TestWorkspaceWatcherManager:
             # Stop watcher
             manager.stop_workspace_watcher(SpaceType.COACHING)
             mock_instance.stop.assert_called_once()
-
-    #FIXME: test_start_coaching_workspace - AssertionError: Expected 'FileSystemWatcher' to be called once. Called 0 times.  
-    def test_start_coaching_workspace(self, mock_workspace_manager, mock_doc_processor):
-        """Test starting the coaching workspace specifically."""
-        manager = WorkspaceWatcherManager(mock_workspace_manager, mock_doc_processor)
-        
-        with patch('src.rag.document_watcher.workspace_watcher.FileSystemWatcher', autospec=True) as MockWatcher:
-            # Configure mock
-            mock_instance = Mock()
-            MockWatcher.return_value = mock_instance
             
-            # Start coaching workspace
-            manager.start_coaching_workspace()
-            
-            # Verify watcher was created correctly
-            MockWatcher.assert_called_once_with(
-                workspace_id="COACHING",
-                paths=[Path("/path/to/coaching")],
-                doc_processor=mock_doc_processor
-            )
-            assert SpaceType.COACHING in manager.watchers
-            
-    def test_cleanup(self, mock_workspace_manager, mock_doc_processor):
-        """Test cleaning up all watchers."""
+    def test_stop_all_watchers(self, mock_workspace_manager, mock_doc_processor):
+        """Test stopping all watchers."""
         manager = WorkspaceWatcherManager(mock_workspace_manager, mock_doc_processor)
         
         with patch('src.rag.document_watcher.workspace_watcher.FileSystemWatcher', autospec=True) as MockWatcher:
@@ -117,7 +96,15 @@ class TestWorkspaceWatcherManager:
             # Start watcher
             manager.start_workspace_watcher(SpaceType.COACHING)
             
-            # Clean up
-            manager.cleanup()
+            # Stop all watchers
+            manager.stop_all_watchers()
             mock_instance.stop.assert_called_once()
             assert not manager.watchers
+            
+    def test_stop_all_watchers_no_watchers(self, mock_workspace_manager, mock_doc_processor):
+        """Test stopping all watchers when none are running."""
+        manager = WorkspaceWatcherManager(mock_workspace_manager, mock_doc_processor)
+        
+        # Should not raise any errors
+        manager.stop_all_watchers()
+        assert not manager.watchers

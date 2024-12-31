@@ -16,14 +16,14 @@ EXPECTED_MODELS = [
     {
         "name": "mistral:latest",
         "size": "4.1GB",
-        "description": "Modèle local Ollama",
+        "description": "Local Ollama model",
         "context_length": 8192,
         "local": True
     },
     {
         "name": "llama2:latest",
         "size": "3.8GB",
-        "description": "Modèle local Ollama",
+        "description": "Local Ollama model",
         "context_length": 8192,
         "local": True
     }
@@ -101,14 +101,14 @@ class TestUpdateOllamaConfig:
                 "models": {
                     "mistral:latest": {
                         "name": "mistral:latest",
-                        "description": "Modèle local Ollama",
+                        "description": "Local Ollama model",
                         "context_length": 8192,
                         "local": True,
                         "size": "4.1GB"
                     },
                     "llama2:latest": {
                         "name": "llama2:latest",
-                        "description": "Modèle local Ollama",
+                        "description": "Local Ollama model",
                         "context_length": 8192,
                         "local": True,
                         "size": "3.8GB"

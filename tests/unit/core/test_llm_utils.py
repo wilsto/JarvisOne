@@ -46,10 +46,27 @@ def test_cache_set_and_get(llm_cache):
     model = "test model"
     response = "test response"
     
+    # Enable cache
+    llm_cache.cache_enabled = True
+    
+    # Set cache
     llm_cache.set(prompt, model, response)
+    
+    # Get from cache
     result = llm_cache.get(prompt, model)
     
     assert result == response
+    
+    # Verify cache file exists
+    cache_key = llm_cache._get_cache_key(prompt, model)
+    cache_file = Path(llm_cache.cache_dir) / f"{cache_key}.json"
+    assert cache_file.exists()
+    
+    # Verify cache content
+    with open(cache_file, 'r', encoding='utf-8') as f:
+        cache_data = json.load(f)
+        assert cache_data['response'] == response
+        assert 'timestamp' in cache_data
 
 def test_cache_expiration(llm_cache):
     """Test cache expiration."""

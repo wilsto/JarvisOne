@@ -38,10 +38,18 @@ def mock_agents():
     }
 
 @pytest.fixture
-def orchestrator(mock_llm, mock_config, mock_agents, mock_session_state):
+def mock_query_analyzer():
+    """Mock query analyzer agent."""
+    analyzer = Mock()
+    analyzer.analyze_query = Mock()
+    return analyzer
+
+@pytest.fixture
+def orchestrator(mock_llm, mock_config, mock_agents, mock_query_analyzer, mock_session_state):
     """Create AgentOrchestrator with mocked dependencies."""
     with patch("features.agents.agent_orchestrator.get_llm_model", return_value=mock_llm), \
          patch("features.agents.agent_orchestrator.ConfigManager.load_llm_preferences", return_value=mock_config), \
+         patch("features.agents.agent_orchestrator.query_analyzer_agent", mock_query_analyzer), \
          patch.object(AgentOrchestrator, "_load_agents", return_value=mock_agents):
         return AgentOrchestrator()
 
@@ -53,28 +61,28 @@ def test_initialization(orchestrator, mock_llm, mock_config):
 
 def test_agent_selection_success(orchestrator, mock_agents):
     """Test successful agent selection."""
-    with patch("features.agents.agent_orchestrator.analyze_query_tool", return_value="file_agent"):
-        agent = orchestrator._select_agent("find file test.txt")
-        assert agent == mock_agents["file"]
+    orchestrator.query_analyzer.analyze_query.return_value = "file_agent"
+    agent = orchestrator._select_agent("find file test.txt")
+    assert agent == mock_agents["file"]
 
 def test_agent_selection_fallback(orchestrator, mock_agents):
     """Test agent selection fallback to chat agent."""
-    with patch("features.agents.agent_orchestrator.analyze_query_tool", return_value="unknown_agent"):
-        agent = orchestrator._select_agent("unknown command")
-        assert agent == mock_agents["chat"]
+    orchestrator.query_analyzer.analyze_query.return_value = "unknown_agent"
+    agent = orchestrator._select_agent("unknown command")
+    assert agent == mock_agents["chat"]
 
 def test_agent_selection_error(orchestrator, mock_agents):
     """Test agent selection error handling."""
-    with patch("features.agents.agent_orchestrator.analyze_query_tool", side_effect=Exception("test error")):
-        agent = orchestrator._select_agent("test query")
-        assert agent == mock_agents["chat"]
+    orchestrator.query_analyzer.analyze_query.side_effect = Exception("test error")
+    agent = orchestrator._select_agent("test query")
+    assert agent == mock_agents["chat"]
 
 def test_process_query_success(orchestrator, mock_agents):
     """Test successful query processing."""
-    with patch("features.agents.agent_orchestrator.analyze_query_tool", return_value="file_agent"):
-        response = orchestrator.process_query("find file test.txt")
-        assert response == {"response": "file response"}
-        mock_agents["file"].run.assert_called_once_with("find file test.txt")
+    orchestrator.query_analyzer.analyze_query.return_value = "file_agent"
+    response = orchestrator.process_query("find file test.txt")
+    assert response == {"response": "file response"}
+    mock_agents["file"].run.assert_called_once_with("find file test.txt")
 
 def test_process_query_error(orchestrator):
     """Test query processing error handling."""

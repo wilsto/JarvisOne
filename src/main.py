@@ -1,3 +1,4 @@
+"""Main entry point for JarvisOne."""
 import streamlit as st
 from pathlib import Path
 from core.workspace_manager import WorkspaceManager, SpaceType
@@ -14,10 +15,17 @@ from datetime import datetime
 from typing import Dict
 from rag.document_processor import DocumentProcessor
 from rag.document_watcher.workspace_watcher import WorkspaceWatcherManager
+import os
+import logging
 
 # Configure logging first
 setup_logging()
 ConfigManager.initialize_logging()  # Initialize logging from config
+
+# Log environment variables for debugging
+logger = logging.getLogger(__name__)
+logger.debug("Environment variables:")
+logger.debug(f"WORKSPACE_COACHING_PATH: {os.environ.get('WORKSPACE_COACHING_PATH', 'Not set')}")
 
 # Suppress Streamlit context warnings
 from utils.streamlit_context import suppress_streamlit_context_warnings

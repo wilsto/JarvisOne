@@ -1,14 +1,14 @@
 """Database cleaning utilities."""
 
 from datetime import datetime
-from typing import List, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func, or_, text
-from .models import Conversation, Message, ConversationTopic
 from pathlib import Path
+from typing import Dict
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
+from .models import Conversation, Message, ConversationTopic
 import json
 
-def log_cleaning_stats(stats: dict, base_dir: Path = None) -> Path:
+def log_cleaning_stats(stats: Dict[str, int], base_dir: Path = None) -> Path:
     """
     Log database cleaning statistics to an external file.
     
@@ -45,82 +45,113 @@ def log_cleaning_stats(stats: dict, base_dir: Path = None) -> Path:
     
     return log_file
 
-def clean_database(session: Session) -> dict:
-    """
-    Clean the database by removing orphaned records and fixing inconsistencies.
-    
-    Returns:
-        dict: Statistics about the cleaning operations performed
-    """
-    stats = {
-        'orphaned_messages_removed': 0,
-        'null_conversation_messages_removed': 0,
-        'untitled_conversations_removed': 0,
-        'empty_conversations_removed': 0,
-        'orphaned_topics_removed': 0,
-        'duplicate_topics_removed': 0,
-        'invalid_workspace_fixed': 0
-    }
-    
-    # 0. Fix invalid workspace values
+def fix_invalid_workspaces(session: Session) -> int:
+    """Fix invalid workspace values to AGNOSTIC."""
     result = session.execute(text("""
         UPDATE conversations 
         SET workspace = 'AGNOSTIC' 
         WHERE workspace NOT IN ('PERSONAL', 'COACHING', 'DEV', 'WORK', 'AGNOSTIC')
     """))
-    stats['invalid_workspace_fixed'] = result.rowcount
+    count = result.rowcount
     session.commit()
+    return count
 
-    # 1. Clean messages with NULL conversation_id
+def clean_null_conversation_messages(session: Session) -> int:
+    """Remove messages with NULL conversation_id."""
     result = session.execute(text("DELETE FROM messages WHERE conversation_id IS NULL"))
-    stats['null_conversation_messages_removed'] = result.rowcount
+    count = result.rowcount
     session.commit()
+    return count
 
-    # 2. Clean messages with invalid conversation_id
-    result = session.execute(text("""
-        DELETE FROM messages 
-        WHERE conversation_id NOT IN (SELECT id FROM conversations)
-        AND conversation_id IS NOT NULL
-    """))
-    stats['orphaned_messages_removed'] = result.rowcount
-    session.commit()
-
-    # 3. Remove conversations without title
+def remove_untitled_conversations(session: Session) -> int:
+    """Remove conversations without title."""
     result = session.execute(text("DELETE FROM conversations WHERE title IS NULL"))
-    stats['untitled_conversations_removed'] = result.rowcount
+    count = result.rowcount
     session.commit()
+    return count
 
-    # 4. Remove empty conversations
-    result = session.execute(text("""
-        DELETE FROM conversations 
-        WHERE id NOT IN (SELECT DISTINCT conversation_id FROM messages)
-    """))
-    stats['empty_conversations_removed'] = result.rowcount
-    session.commit()
-
-    # 5. Clean orphaned topics
+def clean_orphaned_topics(session: Session) -> int:
+    """Remove topics with invalid conversation_id."""
     result = session.execute(text("""
         DELETE FROM conversation_topics 
         WHERE conversation_id IS NULL 
         OR conversation_id NOT IN (SELECT id FROM conversations)
     """))
-    stats['orphaned_topics_removed'] = result.rowcount
+    count = result.rowcount
     session.commit()
+    return count
 
-    # 6. Remove duplicate topics (plus complexe, gardons l'approche ORM pour celle-ci)
-    all_convs = session.query(Conversation).all()
-    duplicate_topics_removed = 0
-    
-    for conv in all_convs:
-        seen_topics = set()
-        for topic in conv.topics:
-            if topic.topic.lower() in seen_topics:
-                session.delete(topic)
-                duplicate_topics_removed += 1
-            else:
-                seen_topics.add(topic.topic.lower())
-    stats['duplicate_topics_removed'] = duplicate_topics_removed
+def clean_orphaned_messages(session: Session) -> int:
+    """Remove messages with invalid conversation_id."""
+    result = session.execute(text("""
+        DELETE FROM messages 
+        WHERE conversation_id NOT IN (SELECT id FROM conversations)
+        AND conversation_id IS NOT NULL
+    """))
+    count = result.rowcount
     session.commit()
+    return count
+
+def remove_empty_conversations(session: Session) -> int:
+    """Remove conversations without any messages."""
+    result = session.execute(text("""
+        DELETE FROM conversations 
+        WHERE id NOT IN (SELECT DISTINCT conversation_id FROM messages)
+    """))
+    count = result.rowcount
+    session.commit()
+    return count
+
+def remove_duplicate_topics(session: Session) -> int:
+    """Remove duplicate topics (case-insensitive) while preserving original case."""
+    # 1. Récupérer tous les topics groupés par conversation
+    topics_by_conv = {}
+    for topic in session.query(ConversationTopic).order_by(ConversationTopic.id).all():
+        key = (topic.conversation_id, topic.topic.lower())
+        if key not in topics_by_conv:
+            topics_by_conv[key] = topic.id
+    
+    if not topics_by_conv:
+        return 0
+    
+    # 2. Construire la liste des IDs à garder
+    ids_list = ",".join(f"'{id}'" for id in topics_by_conv.values())
+    
+    # 3. Supprimer les topics qui ne sont pas les premiers de leur groupe
+    result = session.execute(text(f"""
+        DELETE FROM conversation_topics
+        WHERE id NOT IN ({ids_list})
+    """))
+    
+    count = result.rowcount
+    session.commit()
+    return count
+
+def clean_database(session: Session) -> Dict[str, int]:
+    """
+    Clean the database by removing orphaned records and fixing inconsistencies.
+    
+    This function performs the following operations in order:
+    1. Fix invalid workspace values
+    2. Remove messages with NULL conversation_id
+    3. Remove untitled conversations
+    4. Clean orphaned topics
+    5. Clean orphaned messages
+    6. Remove empty conversations
+    7. Remove duplicate topics
+    
+    Returns:
+        dict: Statistics about the cleaning operations performed
+    """
+    stats = {
+        'invalid_workspace_fixed': fix_invalid_workspaces(session),
+        'null_conversation_messages_removed': clean_null_conversation_messages(session),
+        'untitled_conversations_removed': remove_untitled_conversations(session),
+        'orphaned_topics_removed': clean_orphaned_topics(session),
+        'orphaned_messages_removed': clean_orphaned_messages(session),
+        'empty_conversations_removed': remove_empty_conversations(session),
+        'duplicate_topics_removed': remove_duplicate_topics(session)
+    }
     
     # Log cleaning stats to external file
     log_file = log_cleaning_stats(stats)
@@ -128,7 +159,7 @@ def clean_database(session: Session) -> dict:
     
     return stats
 
-def reset_database(session: Session) -> dict:
+def reset_database(session: Session) -> Dict[str, int]:
     """
     Reset the database by removing all conversations and messages.
     This is a dangerous operation that cannot be undone.

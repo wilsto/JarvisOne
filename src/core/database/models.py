@@ -1,13 +1,34 @@
 """SQLAlchemy models for conversation persistence."""
 
-from datetime import datetime
+from datetime import datetime, UTC
 import uuid
-from sqlalchemy import Column, String, DateTime, Float, ForeignKey, create_engine, Enum
+from sqlalchemy import Column, String, DateTime, Float, ForeignKey, create_engine, Enum, TypeDecorator
 from sqlalchemy.orm import relationship, declarative_base
 from core.workspace_manager import SpaceType
 
 # Use the new declarative_base from sqlalchemy.orm
 Base = declarative_base()
+
+class ISODateTime(TypeDecorator):
+    """Platform-independent ISO8601 DateTime type."""
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        """Convert DateTime to ISO8601 string."""
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        return value.isoformat()
+
+    def process_result_value(self, value, dialect):
+        """Convert ISO8601 string to DateTime."""
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        return datetime.fromisoformat(value)
 
 class Conversation(Base):
     """Represents a chat conversation."""
@@ -15,8 +36,8 @@ class Conversation(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=True)
-    start_timestamp = Column(DateTime, default=datetime.utcnow)
-    last_timestamp = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    start_timestamp = Column(ISODateTime, default=lambda: datetime.now(UTC))
+    last_timestamp = Column(ISODateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     summary = Column(String, nullable=True)
     workspace = Column(Enum(SpaceType), default=SpaceType.AGNOSTIC, nullable=False)
 
@@ -30,7 +51,7 @@ class Message(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     conversation_id = Column(String, ForeignKey('conversations.id'))
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(ISODateTime, default=lambda: datetime.now(UTC))
     role = Column(String, nullable=False)  # 'user' or 'assistant'
     content = Column(String, nullable=False)
 

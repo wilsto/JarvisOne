@@ -76,9 +76,19 @@ class WorkspaceManager:
                     if 'scope' in config_data:
                         metadata['scope'] = config_data['scope']
                         
+                    # Log raw paths before expansion
+                    logger.debug(f"Raw paths for {space_type}: {config_data['paths']}")
+                    expanded_paths = []
+                    for p in config_data['paths']:
+                        expanded = os.path.expandvars(p)
+                        logger.debug(f"Expanded path {p} to {expanded}")
+                        if expanded == p and '$' in p:
+                            logger.warning(f"Environment variable in path {p} was not expanded")
+                        expanded_paths.append(Path(expanded))
+                        
                     self.spaces[space_type] = SpaceConfig(
                         name=config_data['name'],
-                        paths=[Path(os.path.expandvars(p)) for p in config_data['paths']],
+                        paths=expanded_paths,
                         metadata=metadata,
                         search_params=config_data.get('search_params', {}),
                         tags=config_data.get('tags', []),

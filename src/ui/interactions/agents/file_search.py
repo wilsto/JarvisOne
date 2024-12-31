@@ -57,35 +57,35 @@ class FileSearchDisplay(BaseInteractionDisplay):
             st.error("Failed to launch Everything")
     
     def display(self, interaction: Dict[str, Any]) -> None:
-        # En-tête avec le nombre total de résultats et la requête
+        # Header with total results count and query
         col1, col2 = st.columns([3, 1])
         with col1:
             st.markdown(
                 f"<div class='search-info'>"
-                f"<b>Requête :</b> <code>{interaction['query']}</code>"
+                f"<b>Query:</b> <code>{interaction['query']}</code>"
                 f"</div>",
                 unsafe_allow_html=True
             )
         with col2:
-            st.metric("Total trouvé", len(interaction['results']), label_visibility="visible")
+            st.metric("Total found", len(interaction['results']), label_visibility="visible")
         
-        # Limiter l'affichage aux 10 premiers résultats
+        # Limit display to first 10 results
         display_results = interaction['results'][:10]
         remaining_count = len(interaction['results']) - 10 if len(interaction['results']) > 10 else 0
         
-        # Affichage des résultats
+        # Display results
         for i, result in enumerate(display_results, 1):
             self._display_result_item(interaction['id'], i, result)
         
-        # Afficher le nombre de résultats restants
+        # Show remaining results count
         if remaining_count > 0:
             st.markdown(
                 f"<div class='remaining-count'>+ {remaining_count} more files found</div>",
                 unsafe_allow_html=True
             )
         
-        # Bouton Everything en bas
-        st.button("🔍 Ouvrir dans Everything", 
+        # Everything button at the bottom
+        st.button("🔍 Open in Everything", 
                  key=f"open_everything_{interaction['id']}", 
                  use_container_width=True,
                  on_click=self._launch_everything_gui,
@@ -111,9 +111,9 @@ class FileSearchDisplay(BaseInteractionDisplay):
             )
         
         with cols[2]:
-            if st.button("📋", key=f"copy_{interaction_id}_{index}", help="Copier le chemin"):
+            if st.button("📋", key=f"copy_{interaction_id}_{index}", help="Copy path"):
                 self._copy_path(file_path)
-                st.toast("Chemin copié !", icon="✅")
+                st.toast("Path copied!", icon="✅")
         with cols[3]:                
-            if st.button("📂", key=f"open_{interaction_id}_{index}", help="Ouvrir le fichier"):
+            if st.button("📂", key=f"open_{interaction_id}_{index}", help="Open file"):
                 self._open_file(file_path)
