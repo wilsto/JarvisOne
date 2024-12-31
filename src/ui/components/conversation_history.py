@@ -1,7 +1,7 @@
 """Sidebar component for conversation history."""
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from typing import Optional, Callable, List, Dict
 from ..styles.sidebar import SIDEBAR_STYLE
@@ -10,7 +10,11 @@ logger = logging.getLogger(__name__)
 
 def format_timestamp(dt: datetime) -> str:
     """Format timestamp in a user-friendly way."""
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
+    # Ensure dt is timezone-aware
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
     diff = now - dt
     
     if diff.days == 0:
@@ -117,4 +121,3 @@ def render_conversation_item(
                 type="secondary" if is_active else "primary"
             ):
                 on_conversation_selected(conversation["id"])
-

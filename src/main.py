@@ -322,8 +322,9 @@ if __name__ == "__main__":
             display_chat()  # Your function that generates chat content
             st.markdown('</div>', unsafe_allow_html=True)
         with library_tab:
-            st.markdown("### Library")
-            st.info("Library features coming soon!")
+            from features.ui.library_tab import LibraryTab
+            library = LibraryTab(st.session_state.workspace_manager)
+            library.render()
         with apps_tab:
             display_apps()
 

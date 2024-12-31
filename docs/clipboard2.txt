@@ -1,0 +1,23 @@
+Generate the UI for a "Library" tab in a document management application, adhering to the following specifications:
+
+In the "Library" tab
+
+
+2.  **Header Area:**
+    *   **Purpose:** Display the current library tab header and provide context.
+    *   **Elements:**
+        *  A text label indicating that the number of documents being displayed located within the library (workspace context).
+        *  A search bar for filtering documents.
+
+3.  **Document List Area:**
+    *   **Purpose:** Display a list of documents in a clear, structured format.
+    *   **Elements:**
+        *   A table or list component should be used to structure the document entries.
+        *   Each document should have a dedicated row.
+        *  The table should include the following columns:
+            *   **File Icon Column:** Displays an icon representing the file type. The icon should be visually distinct based on the file format (e.g., PDF, PPTX, TXT).
+            *   **Document Information Column:**
+                *   A main line displays the document's name.
+                *   A secondary line displays the document's path (or location).
+            *   **Settings Column:** A settings icon that could allow users to configure the item.
+            *   **Folder Column:** An icon representing a folder to open the file's location.

@@ -1,0 +1,57 @@
+NEW FEATURE.
+ Your task is to implement automatic document import for all workspaces. This feature must automatically load new, modified, and deleted documents in a per-workspace basis.
+
+You will implement a system that ensures that each workspace in JarvisOne automatically maintains an updated knowledge base by tracking file changes and updating the database as needed. This automated process should:
+
+1.  **Provide per-workspace document management:** Each workspace should have its own automatically updated knowledge base by tracking any changes in its file system directory.
+     * New files must be ingested into the vector database.
+     * Modified files must be ingested into the vector database using the latest version of the content.
+      *Deleted files must be removed from the vector database, to avoid stale results.
+   *  All operations should be performed in a background thread, and should be logged using the logging module.
+2.  **Scalable to all workspaces**: The implementation must handle an indefinite amount of workspaces.
+     * Paths of folders to wathc are in config for each workspace.	
+3. **Document Loading and Processing**:
+    * The system must support automatic loading of the following types of files : `.txt`, `.json`, `.md`, `.pdf`, `.docx`, `.xlsx`, `.pptx`, and `.epub`.
+     * The files should be loaded with proper error handling, by skipping the files that cannot be loaded and reporting the errors using the logging module.
+    * The system should chunk the document and create embeddings for each document by using the "all-mpnet-base-v2" model.
+     * Store all of the chunks, embeddings, and the following metadata in ChromaDB vector database
+         *   `file_path`: The path of the loaded document.
+         *  `workspace_id`: The ID of the current workspace.
+         *   `importance_level`: The importance of the document ("High", "Medium" (default), "Low", or "Excluded").
+         *   `created_at`: The creation date of the file.
+         *  `modified_at`: The last modification date of the file.
+         * `file_type`: The file extension of the current file.
+4.  **File Tracking:** The system should keep track of the documents that have been already ingested, modified, or removed, by using the id that is formed with the combination of the `workspace_id` and the filename.
+
+For the initial implementation of the MVP, focus on the "Coaching" workspace as a pilot. Your implementation should:
+
+1.  **Monitor the "Coaching" Workspace** This workspace should be monitored for changes, while the application runs. The goal of the MVP is to test the core logic and UI. All other workspaces must be implemented at a later stage.
+
+2.  **Store Embeddings and Metadata**: Make sure that embeddings and metadata are stored in a vector database that has a per-workspace folder.
+3.  **Initial scan**: During the application startup, the system must scan all directories, and start listening to changes in the file system.
+
+Focus on the correct implementation of this NEW FEATURE, don't optimise or refactoring anyting else. No regression 
+Verify that all of the requirements are met and the data is correctly stored in the ChromaDB vector database. 
+
+ask questions if neeed to clarify or confirm, delatil your action plan you will follow including tech stack. 
+
+
+Implementation Plan:
+
+Phase 1: xxxxxx
+[ ] Task 1
+[ ] Task 2
+[ ] Task 3
+
+Phase 2: yyyyyy
+[ ] Task 4
+[ ] Task 5
+[ ] Task 6
+
+Phase 3: zzzzzz
+[ ] Add startup scanning
+[ ] Integrate with workspace configuration
+[ ] Test with Coaching workspace
+
+je ne comprends pas pouquoi tu as crée c:\Users\Will\OneDrive\Dev\JARVIS\JarvisOne\src\models\document.pyDrive\Dev\JARVIS\JarvisOne\src\rag\document_watcher\document_tracker.py ?
+be focus , no regression, no dispersion and follow rules
