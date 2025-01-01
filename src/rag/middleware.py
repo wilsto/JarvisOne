@@ -3,8 +3,10 @@ RAG Middleware for enhancing prompts with relevant document context.
 """
 
 import logging
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
+import os
+from datetime import datetime
 
 from .document_processor import DocumentProcessor, ImportanceLevelType
 
@@ -41,28 +43,73 @@ class RAGMiddleware:
         self.config = config or RAGConfig()
         logger.info("Initialized RAG middleware with config: %s", self.config)
     
-    def _format_context(self, documents: List[Dict]) -> str:
-        """Format document contents into a context string."""
-        if not documents:
+    def _format_context(self, results: List[Dict]) -> str:
+        """Format results into a context string for prompt enhancement."""
+        if not results:
             return ""
-        
-        # Sort by similarity score
-        sorted_docs = sorted(documents, key=lambda x: x['similarity_score'], reverse=True)
-        
-        # Filter by minimum similarity
-        relevant_docs = [
-            doc for doc in sorted_docs 
-            if doc['similarity_score'] >= self.config.min_similarity
-        ]
-        
-        # Format each document with its metadata
+            
         context_parts = []
-        for doc in relevant_docs[:self.config.max_results]:
+        for result in results:
+            metadata = result.get('metadata', {})
+            source = metadata.get('source', 'Unknown source')
+            file_name = os.path.basename(source)
             context_parts.append(
-                f"[Score: {doc['similarity_score']:.2f}] {doc['content'].strip()}"
+                f"[Source: {file_name} | Score: {result['similarity_score']:.2f}]\n{result['content'].strip()}"
             )
         
         return "\n\n".join(context_parts)
+    
+    def _get_search_results(self, query: str, workspace_id: str) -> List[Dict]:
+        """Get and format search results."""
+        # Search for relevant documents
+        documents = self.processor.search_documents(
+            query=query,
+            workspace_id=workspace_id,
+            n_results=self.config.max_results,
+            importance_filter=self.config.importance_filter
+        )
+        
+        # Filter and format results
+        return [
+            {
+                'content': doc['content'].strip(),
+                'similarity_score': doc['similarity_score'],
+                'metadata': doc.get('metadata', {})
+            }
+            for doc in documents 
+            if doc['similarity_score'] >= self.config.min_similarity
+        ]
+    
+    async def get_interaction_data(self, query: str, workspace_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get RAG results formatted for UI interaction display.
+        
+        Args:
+            query: The user's query
+            workspace_id: ID of the workspace to search in
+            
+        Returns:
+            Dictionary containing the interaction data for RAG results
+        """
+        try:
+            logger.info("Getting RAG results for interaction display")
+            results = self._get_search_results(query, workspace_id)
+            
+            if results:
+                logger.info("Found relevant context from %d documents", len(results))
+                return {
+                    'type': 'rag_search',
+                    'query': query,
+                    'results': results,
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            logger.info("No relevant context found")
+            return None
+            
+        except Exception as e:
+            logger.error("Error getting interaction data: %s", str(e))
+            return None
     
     async def enhance_prompt(self, query: str, workspace_id: str) -> str:
         """
@@ -77,30 +124,19 @@ class RAGMiddleware:
         """
         try:
             logger.info("Enhancing prompt for query in workspace %s", workspace_id)
+            results = self._get_search_results(query, workspace_id)
             
-            # Search for relevant documents
-            documents = self.processor.search_documents(
-                query=query,
-                workspace_id=workspace_id,
-                n_results=self.config.max_results,
-                importance_filter=self.config.importance_filter
-            )
-            
-            # Format context from documents
-            context = self._format_context(documents)
-            
-            if context:
-                logger.info("Found relevant context from %d documents", len(documents))
-                # Return enhanced prompt
+            if results:
+                logger.info("Found relevant context from %d documents", len(results))
+                context = self._format_context(results)
                 return self.config.context_template.format(
                     context=context,
                     query=query
                 )
-            else:
-                logger.info("No relevant context found, returning original query")
-                return query
-                
+            
+            logger.info("No relevant context found, returning original query")
+            return query
+            
         except Exception as e:
             logger.error("Error enhancing prompt: %s", str(e))
-            # On error, return original query
             return query

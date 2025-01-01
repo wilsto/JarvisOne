@@ -1,20 +1,48 @@
-app_state:
-  cache_enabled: false
-  notification_enabled: true
-  role: Coach
-  workspace: COACHING
-data_dir: data
-llm:
-  default_model: mistral:latest
-  default_provider: Ollama (Local)
-  model: gpt-4o-mini
-  provider: OpenAI
-  timeout:
-    connect: 10
-    read: 300
+# Application Configuration
+app:
+  name: JarvisOne
+  version: 0.1.0
+
+# UI Configuration
+ui:
+  theme: light
+  layout: wide
+  sidebar_width: 300
+
+# Logging Configuration
 logging:
   level: INFO
-  max_log_entries: 1000
+  format: "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+# LLM Configuration
+llm:
+  provider: Ollama (Local)
+  model: mistral:latest
+  max_tokens: 2000
+  temperature: 0.7
+
+# Tool Configuration
+tools:
+  everything:
+    cli_path: "C:\\Program Files\\Everything\\es.exe"
+    gui_path: "C:\\Program Files\\Everything\\Everything.exe"
+
+# Vector DB Configuration
+vector_db:
+  collection_prefix: workspace_
+  collection_settings:
+    chunk_overlap: 200
+    chunk_size: 1000
+    distance_metric: cosine
+    embedding_function: sentence-transformers/all-MiniLM-L6-v2
+  monitoring:
+    log_queries: true
+    metrics_enabled: true
+    performance_threshold_ms: 1000
+  path: data/vector_db
+
+# RAG Configuration
 rag:
   agents:
   - chat_agent
@@ -35,21 +63,13 @@ rag:
     - .md
     - .json
   enabled: true
-tools:
-  everything:
-    cli_path: C:\Program Files\Everything\es.exe
-    gui_path: C:\Program Files\Everything\Everything.exe
-ui:
-  theme: default
-vector_db:
-  collection_prefix: workspace_
-  collection_settings:
-    chunk_overlap: 200
-    chunk_size: 1000
-    distance_metric: cosine
-    embedding_function: sentence-transformers/all-MiniLM-L6-v2
-  monitoring:
-    log_queries: true
-    metrics_enabled: true
-    performance_threshold_ms: 1000
-  path: data/vector_db
+
+# Data Directory
+data_dir: data
+
+# App State
+app_state:
+  cache_enabled: false
+  notification_enabled: true
+  role: Coach
+  workspace: COACHING
