@@ -93,6 +93,12 @@ class CoreAgent(MessageProcessor):
                 role_id=role_id
             )
             
+            if results:
+                # Create RAG interaction when documents are found
+                from features.agents.chat_agent import handle_rag_interaction
+                handle_rag_interaction(query, results)
+                logger.info("Found RAG content from unknown source")
+            
             if not results:
                 logger.warning(f"No RAG results found for workspace {workspace_id}")
                 return ""
@@ -200,7 +206,7 @@ class CoreAgent(MessageProcessor):
         
         # Build prompt with all context
         prompt = self._build_prompt(user_query, workspace_id, role_id)
-        logger.info(f"##DEBUG## Using final prompt: {prompt}...")
+        logger.debug(f"##DEBUG## Using final prompt: {prompt}...")
         
         # On demande au LLM de générer une réponse
         llm_response = self.llm.generate_response(prompt)
@@ -217,8 +223,10 @@ class CoreAgent(MessageProcessor):
                     logger.error(f"Error while executing tool {tool.__name__} : {e}")
                     content = []
 
-        # Gérer l'interaction UI si définie - utiliser la requête transformée
-        interaction_id = self._handle_interaction(llm_response, content)
+        # Gérer l'interaction UI si définie et si RAG n'est pas utilisé
+        interaction_id = None
+        if not (workspace_id and self.rag_handler):
+            interaction_id = self._handle_interaction(llm_response, content)
 
         # Si on a un formateur de sortie, on l'utilise
         if self.output_formatter:

@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 import os
 from datetime import datetime
+import uuid
 
 from .document_processor import DocumentProcessor, ImportanceLevelType
 
@@ -61,6 +62,8 @@ class RAGMiddleware:
     
     def _get_search_results(self, query: str, workspace_id: str) -> List[Dict]:
         """Get and format search results."""
+        logger.debug(f"Searching documents for query: {query[:100]}...")
+        
         # Search for relevant documents
         documents = self.processor.search_documents(
             query=query,
@@ -69,46 +72,48 @@ class RAGMiddleware:
             importance_filter=self.config.importance_filter
         )
         
+        logger.debug(f"Found {len(documents)} documents")
+        
         # Filter and format results
-        return [
+        results = [
             {
                 'content': doc['content'].strip(),
                 'similarity_score': doc['similarity_score'],
-                'metadata': doc.get('metadata', {})
+                'metadata': {
+                    'source': doc.get('source', 'Unknown'),
+                    'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
             }
             for doc in documents 
             if doc['similarity_score'] >= self.config.min_similarity
         ]
-    
-    async def get_interaction_data(self, query: str, workspace_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get RAG results formatted for UI interaction display.
         
-        Args:
-            query: The user's query
-            workspace_id: ID of the workspace to search in
-            
-        Returns:
-            Dictionary containing the interaction data for RAG results
-        """
+        logger.info(f"Returning {len(results)} relevant results after filtering")
+        return results
+
+    async def get_interaction_data(self, query: str, workspace_id: str) -> Optional[Dict[str, Any]]:
+        """Get RAG results formatted for UI interaction display."""
         try:
-            logger.info("Getting RAG results for interaction display")
+            logger.info(f"Getting RAG results for query: {query[:100]}...")
             results = self._get_search_results(query, workspace_id)
             
             if results:
-                logger.info("Found relevant context from %d documents", len(results))
-                return {
+                logger.info(f"Found {len(results)} relevant documents")
+                interaction_data = {
+                    'id': str(uuid.uuid4()),  # Add unique ID
                     'type': 'rag_search',
                     'query': query,
                     'results': results,
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().strftime("%H:%M:%S")
                 }
+                logger.debug(f"Created interaction data: {interaction_data}")
+                return interaction_data
             
-            logger.info("No relevant context found")
+            logger.info("No relevant documents found")
             return None
             
         except Exception as e:
-            logger.error("Error getting interaction data: %s", str(e))
+            logger.error(f"Error getting interaction data: {str(e)}", exc_info=True)
             return None
     
     async def enhance_prompt(self, query: str, workspace_id: str) -> str:

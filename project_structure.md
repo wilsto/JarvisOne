@@ -54,6 +54,10 @@ This document describes the purpose of each directory and file within the Jarvis
 
   - **Purpose**: Details the integration with the Everything search tool, including CLI commands, parameters, and usage examples.
 
+  #### `docs/configuration.md`
+
+  - **Purpose**: Configuration guide and best practices
+
 ### `log/`
 
 - **Purpose**: Maintains timestamped application logs for monitoring, debugging, and audit purposes.
@@ -174,6 +178,22 @@ This document describes the purpose of each directory and file within the Jarvis
       - Coordinates document tracking across workspaces
       - Handles watcher lifecycle (start/stop)
 
+    ### `src/rag/enhancer.py`
+    
+    - **Purpose**: Enhances prompts with document context
+
+    ### `src/rag/middleware.py`
+    
+    - **Purpose**: RAG processing middleware
+
+    ### `src/rag/processor.py`
+    
+    - **Purpose**: Message processing interface
+
+    ### `src/rag/query_handler.py`
+    
+    - **Purpose**: Handles RAG queries
+
   #### `src/ui/`
 
   - **Purpose**: Implements the Streamlit-based user interface components.
@@ -185,6 +205,11 @@ This document describes the purpose of each directory and file within the Jarvis
     ##### `src/ui/interactions/`
 
     - **Purpose**: Handles user input events and UI state management.
+
+    - `base.py`: Base interaction display class
+    - `agents/`: Agent-specific interaction handlers
+      - `chat.py`: Chat agent interactions
+      - `file_search.py`: File search interactions
 
     ##### `src/ui/styles/`
 
@@ -227,6 +252,14 @@ This document describes the purpose of each directory and file within the Jarvis
   #### `tests/conftest.py`
 
   - **Purpose**: Defines shared test fixtures and configuration.
+
+## New Components
+
+### Interactions
+- `ui/interactions/`: Base classes and handlers for UI interactions
+
+### Configuration
+- `.env.example`: Template for environment variables (API keys)
 
 ## Tech Stack
 

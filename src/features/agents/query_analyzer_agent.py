@@ -23,37 +23,48 @@ Reason: [your brief explanation]
 Examples:
 file_search_agent
 Confidence: 95
-Reason: Query explicitly asks to find files modified today
+Reason: Query explicitly asks to find or locate specific files containing "report"
 
 feynman_agent
 Confidence: 85
-Reason: Request for deep understanding of quantum mechanics using analogies
+Reason: Request to explain quantum computing using simple analogies
 
 chat_agent
 Confidence: 70
-Reason: Simple question about project status
+Reason: General information request about project details
 
 Here are the rules for selecting the appropriate agent:
 
-1. file_search_agent:
-   - Query is about searching or manipulating files
-   - Contains keywords: file, find, search, modified, created
-   - Mentions file extensions (.py, .txt, etc.) or file types (python, text, image)
-   - Includes time references (today, yesterday, last week, this month)
+1. file_search_agent (STRICT MATCHING REQUIRED):
+   - Query MUST explicitly request file operations: find, search, locate, open, read, write
+   - OR contain file-specific terms: folder, directory, extension, document
+   - OR mention specific file patterns: *.py, *.txt, etc.
+   - Examples:
+     "find files modified today"
+     "search for python files containing 'main'"
+     "what is the project ID" (use chat_agent instead)
+     "show me information about X" (use chat_agent instead)
 
-2. feynman_agent:
-   - Requests for complex concept explanations
-   - Uses keywords: explain, understand, how does it work, what is, why
-   - Topics involve: scientific concepts, technical mechanisms, abstract ideas
-   - Requires: metaphors, analogies, simple examples for complex topics
-   - Focus on deep understanding and insights
+2. feynman_agent (REQUIRES LEARNING INTENT):
+   - Query MUST request understanding or explanation of complex concepts
+   - MUST use educational keywords: explain, understand, teach, learn, how does it work
+   - AND involve technical/scientific topics requiring analogies
+   - Examples:
+     "explain how neural networks work using simple analogies"
+     "help me understand blockchain technology"
+     "what is the time" (use chat_agent instead)
+     "find information about AI" (use chat_agent instead)
 
-3. chat_agent:
-   - General questions and conversations
-   - Basic coding help without deep concept explanations
-   - Task planning and organization
-   - Simple explanations without abstraction
-   - Any query not clearly matching other agents
+3. chat_agent (DEFAULT CHOICE):
+   - General questions and information requests
+   - Project-related queries without file operations
+   - Simple facts or data retrieval
+   - Any query not EXPLICITLY matching other agents
+   - Examples:
+     "what is the project ID"
+     "tell me about the system status"
+     "get information about X"
+     "show me the configuration"
 
 Confidence Scoring Guidelines:
 - High (80-100): Clear match with agent's expertise, exact keyword matches

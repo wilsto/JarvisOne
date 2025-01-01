@@ -44,43 +44,41 @@ class RAGEnhancer:
         workspace_id: str,
         **kwargs: Dict[str, Any]
     ) -> str:
-        """
-        Process a message with document-enhanced context.
-        
-        Args:
-            message: The message to process
-            workspace_id: ID of the current workspace
-            **kwargs: Additional arguments passed to the processor
-            
-        Returns:
-            The processed response
-        """
+        """Process a message with document-enhanced context."""
         try:
             # Get interaction data for UI display
+            logger.debug(f"Getting RAG interaction data for message: {message[:100]}...")
             interaction_data = await self.middleware.get_interaction_data(message, workspace_id)
-            interaction_id = None
             
+            # If we have RAG results, create a RAG interaction first
             if interaction_data and self.interaction_manager:
-                # Create interaction for RAG results using the manager function
+                logger.info(f"Found {len(interaction_data.get('results', []))} relevant documents")
+                logger.debug("Creating RAG interaction...")
                 interaction_id = self.interaction_manager(message, interaction_data)
                 logger.info(f"Created RAG interaction with ID: {interaction_id}")
+                
+                # Enhance the prompt with relevant document context
+                logger.debug("Getting enhanced prompt...")
+                enhanced_prompt = await self.middleware.enhance_prompt(message, workspace_id)
+                
+                # Process with enhanced prompt
+                logger.info("Processing message with enhanced prompt")
+                return await self.processor.process_message(
+                    enhanced_prompt,
+                    workspace_id,
+                    **kwargs
+                )
             
-            # Enhance the prompt with relevant document context
-            enhanced_prompt = await self.middleware.enhance_prompt(message, workspace_id)
-            
-            # Pass enhanced prompt to processor along with the interaction ID
-            logger.info("Processing enhanced prompt")
-            response = await self.processor.process_message(
-                enhanced_prompt,
+            # If no RAG results, process normally
+            logger.info("No relevant documents found, processing original message")
+            return await self.processor.process_message(
+                message,
                 workspace_id,
-                rag_interaction_id=interaction_id,  # Pass the RAG interaction ID to the processor
                 **kwargs
             )
             
-            return response
-            
         except Exception as e:
-            logger.error("Error in RAG enhancer: %s", str(e))
+            logger.error(f"Error in RAG enhancer: {str(e)}", exc_info=True)
             # Fallback to processor on error
             return await self.processor.process_message(
                 message,

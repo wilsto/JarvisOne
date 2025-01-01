@@ -20,17 +20,14 @@ class QueryAnalyzerDisplay(BaseInteractionDisplay):
         analysis = interaction['analysis']
         confidence = analysis.get('confidence', 0)
         badge = self.get_confidence_badge(confidence)
-        return f"{badge} Analysis: {analysis['agent_selected']} • {interaction['timestamp']}"
+        return f"{badge} Analysis: {analysis['agent_selected']} • {analysis['verifier']['confidence']:.0f}%"
 
     def display(self, interaction: Dict[str, Any]) -> None:
         """Display the interaction in the UI."""
         analysis = interaction['analysis']
-        
-        # Display query
-        st.markdown(f"**Analyzed Query:** {interaction['query']}")
-        
+                
         # Display agent selection details
-        st.markdown("### Agent Selection")
+        st.markdown("***Agent Selection***")
         col1, col2 = st.columns(2)
         
         with col1:
