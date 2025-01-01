@@ -54,22 +54,27 @@ class CoreAgent(MessageProcessor):
         
         # Initialize RAG handler with logging
         if rag_enabled:
-            logger.info("Initializing RAG handler")
+            logger.info(f"Initializing RAG handler for agent: {agent_name}")
             try:
                 self.rag_handler = RAGQueryHandler()
+                logger.info("Successfully initialized RAG query handler")
+                
                 # Test collection access
                 if workspace_manager and workspace_manager.current_space:
                     workspace_id = workspace_manager.current_space.name
+                    logger.info(f"Testing collection access for workspace: {workspace_id}")
                     collection = self.rag_handler._get_collection(workspace_id)
                     if collection:
                         logger.info(f"Successfully accessed collection for workspace: {workspace_id}")
                     else:
-                        logger.warning(f"No collection found for workspace: {workspace_id}")
+                        logger.warning(f"No collection found for workspace: {workspace_id}, will be created when needed")
+                else:
+                    logger.info("No workspace manager or current space available")
             except Exception as e:
                 logger.error(f"Failed to initialize RAG handler: {str(e)}", exc_info=True)
                 self.rag_handler = None
         else:
-            logger.info("RAG functionality is disabled")
+            logger.info(f"RAG functionality is disabled for agent: {agent_name}")
             self.rag_handler = None
 
     def _get_rag_context(self, query: str, workspace_id: str, role_id: str = None) -> str:

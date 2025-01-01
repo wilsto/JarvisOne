@@ -43,11 +43,26 @@ class AgentOrchestrator:
         # Initialize RAG components if enabled
         self.rag_config = None
         self.document_processor = None
+        
+        # Load full application config
         config = ConfigManager.get_all_configs()
-        if config.get("rag", {}).get("enabled", False):
+        logger.info(f"Loaded full config: {config}")
+        
+        # Check RAG settings from app config
+        rag_enabled = config.get("rag", {}).get("enabled", False)
+        logger.info(f"RAG enabled in config: {rag_enabled}")
+        
+        if rag_enabled:
             logger.info("RAG is enabled, initializing components")
-            self.rag_config = RAGConfig(**config["rag"]["config"])
-            self.document_processor = DocumentProcessor()
+            try:
+                rag_config_data = config["rag"]["config"]
+                logger.info(f"RAG config data: {rag_config_data}")
+                self.rag_config = RAGConfig(**rag_config_data)
+                logger.info("Successfully initialized RAG config")
+                self.document_processor = DocumentProcessor()
+                logger.info("Successfully initialized document processor")
+            except Exception as e:
+                logger.error(f"Failed to initialize RAG components: {str(e)}", exc_info=True)
         
         self.query_analyzer = query_analyzer_agent
         self.available_agents = self._load_agents()
@@ -102,7 +117,7 @@ class AgentOrchestrator:
                         # Pass shared LLM instance, workspace_manager and vector_db_path to agent
                         item.llm = self.llm
                         item.workspace_manager = self.workspace_manager
-                        item.rag_handler = RAGQueryHandler(vector_db_path) if config.get("rag", {}).get("enabled", False) else None
+                        item.rag_handler = RAGQueryHandler() if config.get("rag", {}).get("enabled", False) else None
                         agent_name = name.replace("_agent", "")
                         logger.info(f"Initialized agent {agent_name} with RAG: {item.rag_handler is not None}")
                         available_agents[agent_name] = self._enhance_agent_if_needed(

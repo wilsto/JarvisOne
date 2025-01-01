@@ -27,26 +27,40 @@ class DocumentProcessor:
     def __init__(self):
         """Initialize document processor."""
         logger.info("Initializing DocumentProcessor")
-        self.vector_db = VectorDBManager.get_instance()
+        try:
+            self.vector_db = VectorDBManager.get_instance()
+            logger.info("Successfully initialized VectorDBManager")
+            
+            # Initialize text splitter for chunking
+            chunk_size = self.vector_db.config.default_collection.chunk_size
+            chunk_overlap = self.vector_db.config.default_collection.chunk_overlap
+            logger.info(f"Initializing text splitter with chunk_size={chunk_size}, chunk_overlap={chunk_overlap}")
+            
+            self.text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                length_function=len,
+            )
+            logger.info("Successfully initialized text splitter")
+            
+            self._error_queue = queue.Queue()
+            
+            # Initialize document handlers
+            logger.info("Initializing document handlers")
+            self.handlers = [
+                MarkItDownHandler(),  # Pour PDF, DOCX, XLSX, PPTX
+                TextHandler(),        # Pour JSON, MD
+                EpubHandler()         # Pour EPUB
+            ]
+            logger.info("Successfully initialized document handlers")
+            
+            logger.info("DocumentProcessor initialization complete")
+        except Exception as e:
+            logger.error(f"Failed to initialize DocumentProcessor: {str(e)}")
+            raise
         
-        # Initialize text splitter for chunking
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.vector_db.config.default_collection.chunk_size,
-            chunk_overlap=self.vector_db.config.default_collection.chunk_overlap,
-            length_function=len,
-        )
+        # ... rest of the code remains the same ...
         
-        self._error_queue = queue.Queue()
-        
-        # Initialize document handlers
-        self.handlers = [
-            MarkItDownHandler(),  # Pour PDF, DOCX, XLSX, PPTX
-            TextHandler(),        # Pour JSON, MD
-            EpubHandler()         # Pour EPUB
-        ]
-        
-        logger.info("DocumentProcessor initialization complete")
-
     def _process_file_internal(
         self,
         file_path: str,

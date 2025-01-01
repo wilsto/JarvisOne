@@ -16,7 +16,15 @@ class RAGConfig:
     max_results: int = 3
     min_similarity: float = 0.7
     importance_filter: Optional[ImportanceLevelType] = None
+    max_tokens: int = 4000
     context_template: str = "Relevant context:\n{context}\n\nUser query: {query}"
+    
+    def __post_init__(self):
+        """Log configuration after initialization."""
+        logger.info(f"Initializing RAGConfig with: max_results={self.max_results}, "
+                   f"min_similarity={self.min_similarity}, "
+                   f"importance_filter={self.importance_filter}, "
+                   f"max_tokens={self.max_tokens}")
 
 class RAGMiddleware:
     """Middleware for adding document context to prompts."""

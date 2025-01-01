@@ -53,30 +53,35 @@ class DocumentChangeProcessor(StreamlitThread):
                             self.doc_tracker.update_document(
                                 self.workspace_id,
                                 str(file_path),
-                                status='deleted'
+                                status='deleted',
+                                error_message="File no longer exists"
                             )
                             continue
-                        
-                        # Process document with workspace_id
-                        self.doc_processor.process_document(
-                            file_path=str(file_path),
-                            workspace_id=self.workspace_id
-                        )
-                        
-                        # Get document info to preserve hash
-                        doc_info = self.doc_tracker.get_document_status(
-                            self.workspace_id,
-                            str(file_path)
-                        )
-                        
-                        # Update status while preserving hash
-                        self.doc_tracker.update_document(
-                            self.workspace_id,
+                            
+                        # Process the document
+                        logger.info(f"Processing document: {file_path}")
+                        success = self.doc_processor.process_file(
                             str(file_path),
-                            status='processed',
-                            hash_value=doc_info['hash'] if doc_info else None
+                            self.workspace_id
                         )
-                        logger.info(f"Successfully processed document: {file_path}")
+                        
+                        if success:
+                            self.doc_tracker.update_document(
+                                self.workspace_id,
+                                str(file_path),
+                                status='processed'
+                            )
+                            logger.info(f"Successfully processed document: {file_path}")
+                        else:
+                            errors = self.doc_processor.get_errors()
+                            error_msg = "; ".join(errors) if errors else "Unknown error"
+                            self.doc_tracker.update_document(
+                                self.workspace_id,
+                                str(file_path),
+                                status='error',
+                                error_message=error_msg
+                            )
+                            logger.error(f"Failed to process document {file_path}: {error_msg}")
                         
                     except Exception as e:
                         logger.error(f"Error processing document {doc['file_path']}: {e}")

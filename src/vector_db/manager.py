@@ -34,15 +34,30 @@ class VectorDBManager:
             config: Application configuration dictionary
         """
         logger.info("Initializing VectorDBManager")
-        self.config = self._load_config(config)
-        self._client = None
-        self._collections: Dict[str, chromadb.Collection] = {}
-        self.monitor = VectorDBMonitor()
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=self.config.default_collection.embedding_function,
-            encode_kwargs={"normalize_embeddings": True}  # Add encoding configuration
-        )
-        self.initialize(self.config)
+        try:
+            logger.info("Loading vector DB configuration")
+            self.config = self._load_config(config)
+            logger.info(f"Vector DB config loaded: {self.config}")
+            
+            self._client = None
+            self._collections: Dict[str, chromadb.Collection] = {}
+            
+            logger.info("Initializing VectorDB monitor")
+            self.monitor = VectorDBMonitor()
+            
+            logger.info(f"Initializing embeddings with model: {self.config.default_collection.embedding_function}")
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=self.config.default_collection.embedding_function,
+                encode_kwargs={"normalize_embeddings": True}  # Add encoding configuration
+            )
+            logger.info("Successfully initialized embeddings")
+            
+            logger.info("Starting vector DB initialization")
+            self.initialize(self.config)
+            logger.info("VectorDBManager initialization complete")
+        except Exception as e:
+            logger.error(f"Failed to initialize VectorDBManager: {str(e)}")
+            raise
         
     def _load_config(self, config: dict) -> VectorDBConfig:
         """Load vector DB configuration from app config."""

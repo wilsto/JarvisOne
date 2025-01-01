@@ -128,9 +128,13 @@ class ConfigManager:
         return org_id
         
     @classmethod
-    def get_all_configs(cls) -> Dict[str, Dict[str, Optional[str]]]:
-        """Get all configurations."""
-        return {
+    def get_all_configs(cls) -> Dict[str, Any]:
+        """Get all configurations including app settings and API keys."""
+        # Load the full YAML config
+        config = cls._load_config()
+        
+        # Add API configurations
+        config.update({
             "OpenAI": {
                 "api_key": cls.get_api_key("OpenAI"),
                 "org_id": cls.get_org_id("OpenAI")
@@ -142,7 +146,9 @@ class ConfigManager:
             "Google": {
                 "api_key": cls.get_api_key("Google")
             }
-        }
+        })
+        
+        return config
 
     @classmethod
     def get_tool_config(cls, tool_name: str, config_key: Optional[str] = None) -> Any:
