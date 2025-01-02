@@ -16,6 +16,7 @@ from .llm_utils import (
     llm_cache, retry_on_error, API_KEYS,
     DEFAULT_PARAMS, OLLAMA_DEFAULT_MODELS
 )
+from . import llm_utils
 
 # Configuration du logger
 logger = logging.getLogger(__name__)

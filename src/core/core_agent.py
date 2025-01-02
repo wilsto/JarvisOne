@@ -127,10 +127,12 @@ class CoreAgent(MessageProcessor):
         """Build the prompt for the LLM."""
         prompt_parts = []
         
-        # Add system prompt
+        # Add system prompt with preferences
         prompt_parts.append("=== System Instructions ===")
         if self.system_prompt:
-            prompt_parts.append(self.system_prompt)
+            from core.prompts.generic_prompts import build_system_prompt
+            modified_prompt = build_system_prompt(self.system_prompt, workspace_id or "")
+            prompt_parts.append(modified_prompt)
             
         # Add workspace context if available
         prompt_parts.append("=== Workspace Context ===")

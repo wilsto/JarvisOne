@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 """Generic prompts for defining core AI characteristics and response formats."""
 
 # Creativity levels mapped to temperature values
@@ -94,6 +98,7 @@ def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
     creativity = st.session_state.get('llm_creativity', 1)
     style = st.session_state.get('llm_style', 1)
     length = st.session_state.get('llm_length', 1)
+    logger.info(f"Retrieved LLM preferences: creativity={creativity}, style={style}, length={length}")
     
     # Generate the modified characteristics and format
     modified_prompt = modify_prompt_by_preferences(creativity, style, length)
