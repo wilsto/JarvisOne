@@ -12,7 +12,6 @@ class WorkspaceContextConfig:
     workspace_id: str
     workspace_prompt: str
     scope: str
-    metadata: Optional[Dict[str, Any]] = None  # For internal use only, not included in prompt
     debug: bool = False
 
 class WorkspaceContextBuilder:

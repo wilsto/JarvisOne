@@ -9,10 +9,6 @@ from pathlib import Path
 from rag.processor import MessageProcessor
 from rag.query_handler import RAGQueryHandler
 from .prompts.components import (
-    SystemPromptBuilder,
-    WorkspaceContextBuilder,
-    RAGContextBuilder,
-    PreferencesBuilder,
     SystemPromptConfig,
     WorkspaceContextConfig,
     RAGContextConfig,
@@ -177,26 +173,24 @@ class CoreAgent(MessageProcessor):
                 if space_config:
                     workspace_config = WorkspaceContextConfig(
                         workspace_id=workspace_id,
-                        workspace_prompt=space_config.get("workspace_prompt", ""),
-                        scope=space_config.get("scope", ""),
-                        metadata=space_config.get("metadata", {}),
+                        workspace_prompt=space_config.workspace_prompt or "",
+                        scope=space_config.scope or "",
                         debug=logger.isEnabledFor(logging.DEBUG)
                     )
                     
                     # Build role config if role_id is provided and roles exist
                     role_config = None
-                    roles = space_config.get("roles", [])
+                    roles = space_config.roles or []
                     if role_id and roles:
                         # Find role in space config
-                        role = next((r for r in roles if r["name"] == role_id), None)
+                        role = next((r for r in roles if r.name == role_id), None)
                         if role:
                             logger.debug(f"Found role configuration for {role_id}")
                             role_config = RoleContextConfig(
                                 role_id=role_id,
-                                role_name=role.get("role_name", ""),
-                                role_description=role.get("role_description", ""),
-                                prompt_context=role.get("prompt_context", ""),
-                                metadata=role.get("metadata", {}),
+                                role_name=role.role_name or "",
+                                role_description=role.role_description or "",
+                                prompt_context=role.prompt_context or "",
                                 debug=logger.isEnabledFor(logging.DEBUG)
                             )
                         else:
@@ -261,9 +255,8 @@ class CoreAgent(MessageProcessor):
             if workspace_config:
                 context.update({
                     "workspace": {
-                        "name": workspace_config.get("name"),
-                        "context": workspace_config.get("metadata", {}).get("context"),
-                        "tags": workspace_config.get("tags")
+                        "name": workspace_config.name,
+                        "tags": workspace_config.tags
                     }
                 })
         return context
@@ -286,6 +279,10 @@ class CoreAgent(MessageProcessor):
         Returns:
             Un dictionnaire contenant la réponse de l'agent.
         """
+        # Check for empty query
+        if not user_query or not user_query.strip():
+            return {"content": "Please provide a valid query."}
+            
         logger.info(f"Running agent with workspace_id={workspace_id}, role_id={role_id}")
         
         # Prepare prompt configuration and build final prompt
