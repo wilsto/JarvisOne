@@ -382,12 +382,17 @@ if __name__ == "__main__":
             library = LibraryTab(st.session_state.workspace_manager)
             library.render()
 
+    # Count errors and warnings in the background
+    logs = get_logs()
+    error_count = sum(1 for log in logs if log.get('level') == 'ERROR')
+    warning_count = sum(1 for log in logs if log.get('level') == 'WARNING')
+    
     # Side column for logs and interactions (1/3)
     with col_side:
         tab_interactions, tab_logs, tab_params, apps_tab = st.tabs([
-            "⚡ Interactions", 
-            "📋 Logs",
-            "⚙️ Parameters", 
+            "⚡ Interactions",
+            f"{'🚨' if error_count > 0 else '⚠️' if warning_count > 0 else '📋'} Logs",
+            "⚙️ Parameters",
             "🔧 Apps"
         ])
         
@@ -405,6 +410,6 @@ if __name__ == "__main__":
             
     # Count errors in the background
     logs = get_logs()
-    error_count = sum(1 for log in logs if log['level'] in ['ERROR', 'CRITICAL'])
+    error_count = sum(1 for log in logs if log.get('level') == 'ERROR')
     if error_count > 0:
         st.sidebar.error(f"{error_count} error(s) detected. Check logs for more details.")
