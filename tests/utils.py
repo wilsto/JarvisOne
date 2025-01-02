@@ -175,3 +175,36 @@ def mock_session_state():
     # Restore original session state
     if original_session_state is not None:
         st.session_state = original_session_state
+
+@dataclass
+class MockRAGDocument:
+    """Mock RAG document for testing."""
+    content: str
+    metadata: dict
+    distance: float
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary format."""
+        return {
+            "content": self.content,
+            "metadata": self.metadata,
+            "distance": self.distance
+        }
+
+class RAGTestUtils:
+    """Utility class for RAG testing."""
+    @staticmethod
+    def create_mock_embeddings(dimensions: int = 3) -> List[float]:
+        """Create mock embeddings vector."""
+        return [1.0] + [0.0] * (dimensions - 1)
+        
+    @staticmethod
+    def create_mock_documents(count: int = 1, base_similarity: float = 0.9) -> List[dict]:
+        """Create mock RAG documents with decreasing similarity."""
+        return [
+            MockRAGDocument(
+                content=f"test document {i}",
+                metadata={"source": "test"},
+                distance=1 - (base_similarity - (0.1 * i))
+            ).to_dict() for i in range(count)
+        ]
