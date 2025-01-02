@@ -49,30 +49,60 @@ class ConfigManager:
             if os.path.exists(cls.CONFIG_FILE):
                 with open(cls.CONFIG_FILE, "r", encoding="utf-8") as f:
                     config = yaml.safe_load(f)
-                    cls._config_cache = config  # Cache the config
+                    # Don't cache sensitive data
+                    if isinstance(config, dict):
+                        # Remove API keys if they were accidentally saved
+                        for provider in ['Anthropic', 'OpenAI', 'Google']:
+                            if provider in config:
+                                del config[provider]
+                    cls._config_cache = config
                     return config
         except Exception as e:
             logger.error(f"Error loading configuration: {e}")
         return {}
         
     @classmethod
+    def save_config(cls, config: Dict) -> None:
+        """Save the unified configuration."""
+        cls._ensure_config_dir()
+        try:
+            # Remove any sensitive data before saving
+            clean_config = config.copy()
+            for provider in ['Anthropic', 'OpenAI', 'Google']:
+                if provider in clean_config:
+                    del clean_config[provider]
+            
+            # Preserve existing structure if possible
+            existing_config = {}
+            if os.path.exists(cls.CONFIG_FILE):
+                with open(cls.CONFIG_FILE, "r", encoding="utf-8") as f:
+                    existing_config = yaml.safe_load(f) or {}
+            
+            # Update only changed sections
+            def deep_update(d, u):
+                for k, v in u.items():
+                    if isinstance(v, dict) and k in d and isinstance(d[k], dict):
+                        deep_update(d[k], v)
+                    else:
+                        d[k] = v
+            
+            deep_update(existing_config, clean_config)
+            
+            # Save with structure preservation
+            with open(cls.CONFIG_FILE, "w", encoding="utf-8") as f:
+                yaml.dump(existing_config, f, indent=2, sort_keys=False, default_flow_style=False)
+            
+            logger.info("Configuration saved successfully")
+            cls._config_cache = clean_config  # Update cache with clean config
+        except Exception as e:
+            logger.error(f"Error saving configuration: {e}")
+    
+    @classmethod
     def initialize_logging(cls):
         """Initialize logging configuration."""
         config = cls._load_config()
         if "logging" in config and "level" in config["logging"]:
             configure_logging(config["logging"]["level"])
-    
-    @classmethod
-    def save_config(cls, config: Dict) -> None:
-        """Save the unified configuration."""
-        cls._ensure_config_dir()
-        try:
-            with open(cls.CONFIG_FILE, "w", encoding="utf-8") as f:
-                yaml.dump(config, f, indent=2)
-            logger.info(f"Configuration saved: {config}")
-            cls._config_cache = config  # Update cache
-        except Exception as e:
-            logger.error(f"Error saving configuration: {e}")
     
     @classmethod
     def load_llm_preferences(cls) -> Dict[str, str]:
@@ -85,12 +115,21 @@ class ConfigManager:
     
     @classmethod
     def save_llm_preferences(cls, provider: str, model: str) -> None:
-        """Save LLM preferences to unified config."""
+        """Save LLM preferences to unified config while preserving other LLM settings.
+        
+        Args:
+            provider: The LLM provider name
+            model: The model name for the provider
+        """
         config = cls._load_config()
-        config["llm"] = {
+        # Preserve existing LLM config
+        llm_config = config.get("llm", {})
+        # Only update provider and model
+        llm_config.update({
             "provider": provider,
             "model": model
-        }
+        })
+        config["llm"] = llm_config
         cls.save_config(config)
 
     @staticmethod
