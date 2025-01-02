@@ -173,6 +173,7 @@ class CoreAgent(MessageProcessor):
             
             # Build workspace config if available
             workspace_config = None
+            role_config = None  # Moved declaration here
             if workspace_id and self.workspace_manager:
                 space_config = self.workspace_manager.get_current_space_config()
                 if space_config:
@@ -184,7 +185,6 @@ class CoreAgent(MessageProcessor):
                     )
                     
                     # Build role config if role_id is provided and roles exist
-                    role_config = None
                     roles = space_config.roles or []
                     if role_id and roles:
                         # Find role in space config
@@ -193,8 +193,8 @@ class CoreAgent(MessageProcessor):
                             logger.debug(f"Found role configuration for {role_id}")
                             role_config = RoleContextConfig(
                                 role_id=role_id,
-                                role_name=role['role_name'] or "",
-                                role_description=role['role_description'] or "",
+                                role_name=role['name'] or "",
+                                role_description=role['description'] or "",
                                 prompt_context=role['prompt_context'] or "",
                                 debug=debug_mode
                             )

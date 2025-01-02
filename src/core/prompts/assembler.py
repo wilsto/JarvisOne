@@ -99,17 +99,18 @@ class PromptAssembler:
                 history = MessageHistoryBuilder.build(config.message_history_config)
                 if history:
                     sections.append(history)
-                    
-            # Current message (required)
-            current_msg = CurrentMessageBuilder.build(config.current_message_config)
-            if current_msg:
-                sections.append(current_msg)
-                    
+
             # RAG context (optional)
             if config.rag_config:
                 rag_ctx = RAGContextBuilder.build(config.rag_config)
                 if rag_ctx:
                     sections.append(rag_ctx)
+
+            # Current message (required)
+            current_msg = CurrentMessageBuilder.build(config.current_message_config)
+            if current_msg:
+                sections.append(current_msg)
+
                     
             return "\n\n".join(sections)
             

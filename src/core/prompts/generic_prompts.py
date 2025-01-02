@@ -66,6 +66,8 @@ GENERIC_UNCERTAINTY_RESPONSE = """
 If you are unable to confidently answer the question, state "I am not sure" instead of fabricating a response.
 """
 
+LANGUAGE_PROMPT = "!Important! Respond in the user's language unless explicitly specified otherwise."
+
 def modify_prompt_by_preferences(creativity_level: int, style_level: int, length_level: int) -> str:
     """Modify the prompt based on user preferences from sliders.
     
