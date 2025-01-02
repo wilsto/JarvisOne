@@ -76,11 +76,6 @@ class PromptAssembler:
             if system_prompt:
                 sections.append(system_prompt)
                 
-            # Preferences (optional)
-            if config.preferences_config:
-                prefs = PreferencesBuilder.build(config.preferences_config)
-                if prefs:
-                    sections.append(prefs)
                     
             # Workspace context (optional)
             if config.workspace_config:
@@ -105,6 +100,12 @@ class PromptAssembler:
                 rag_ctx = RAGContextBuilder.build(config.rag_config)
                 if rag_ctx:
                     sections.append(rag_ctx)
+
+            # Preferences (optional)
+            if config.preferences_config:
+                prefs = PreferencesBuilder.build(config.preferences_config)
+                if prefs:
+                    sections.append(prefs)
 
             # Current message (required)
             current_msg = CurrentMessageBuilder.build(config.current_message_config)

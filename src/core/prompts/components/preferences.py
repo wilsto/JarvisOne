@@ -46,7 +46,9 @@ class PreferencesBuilder:
             from ..generic_prompts import (
                 CREATIVITY_PROMPTS,
                 STYLE_PROMPTS,
-                LENGTH_MODIFIERS
+                LENGTH_MODIFIERS,
+                GENERIC_UNCERTAINTY_RESPONSE,
+                LANGUAGE_PROMPT
             )
             
             sections = []
@@ -57,7 +59,9 @@ class PreferencesBuilder:
             sections.extend([
                 f"Core characteristics:\n{CREATIVITY_PROMPTS[config.creativity_level]}",
                 f"Communication style:\n{STYLE_PROMPTS[config.style_level]}",
-                f"Response length guideline:\n{LENGTH_MODIFIERS[config.length_level]}"
+                f"Response length guideline:\n{LENGTH_MODIFIERS[config.length_level]}",
+                GENERIC_UNCERTAINTY_RESPONSE,
+                LANGUAGE_PROMPT
             ])
             
             return "\n\n".join(sections)
@@ -65,3 +69,4 @@ class PreferencesBuilder:
         except Exception as e:
             logger.error("Error building preferences: %s", e)
             return ""
+
