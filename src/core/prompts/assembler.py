@@ -103,9 +103,9 @@ class PromptAssembler:
 
             # Preferences (optional)
             if config.preferences_config:
-                prefs = PreferencesBuilder.build(config.preferences_config)
-                if prefs:
-                    sections.append(prefs)
+                preferences = PreferencesBuilder.build(None)  # Force using session state
+                if preferences:
+                    sections.append(preferences)
 
             # Current message (required)
             current_msg = CurrentMessageBuilder.build(config.current_message_config)

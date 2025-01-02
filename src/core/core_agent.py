@@ -167,9 +167,8 @@ class CoreAgent(MessageProcessor):
                 debug=debug_mode
             )
             
-            preferences_config = PreferencesConfig(
-                debug=debug_mode
-            )
+            # Use default PreferencesConfig, PreferencesBuilder will handle session state
+            preferences_config = PreferencesConfig(debug=debug_mode)
             
             # Build workspace config if available
             workspace_config = None
