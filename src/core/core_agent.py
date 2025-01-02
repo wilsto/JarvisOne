@@ -17,7 +17,8 @@ from .prompts.components import (
     WorkspaceContextConfig,
     RAGContextConfig,
     PreferencesConfig,
-    RAGDocument
+    RAGDocument,
+    RoleContextConfig
 )
 from .prompts.assembler import PromptAssembler, PromptAssemblerConfig
 
@@ -135,8 +136,28 @@ class CoreAgent(MessageProcessor):
             logger.error(f"Error getting RAG context: {str(e)}", exc_info=True)
             return ""
 
-    def _build_prompt(self, user_query: str, workspace_id: str = None, role_id: str = None) -> str:
-        """Build the prompt for the LLM using the new component-based architecture."""
+    def _prepare_prompt_config(self, user_query: str, workspace_id: str = None, role_id: str = None) -> PromptAssemblerConfig:
+        """Prepare the configuration for prompt assembly.
+        
+        This method acts as a Director in the Builder pattern, preparing all necessary
+        configurations that will be used by the PromptAssembler to build the final prompt.
+        It does NOT build the prompt itself, but rather collects and organizes all the
+        components that should be included.
+        
+        Args:
+            user_query: The user's query to process
+            workspace_id: Optional ID of the current workspace
+            role_id: Optional ID of the current role
+            
+        Returns:
+            PromptAssemblerConfig: Configuration object containing all components
+            needed to build the final prompt
+            
+        Note:
+            This method follows the Single Responsibility Principle by focusing only
+            on configuration preparation, leaving the actual prompt assembly to the
+            PromptAssembler class.
+        """
         try:
             # Initialize configs
             system_config = SystemPromptConfig(
@@ -152,18 +173,34 @@ class CoreAgent(MessageProcessor):
             # Build workspace config if available
             workspace_config = None
             if workspace_id and self.workspace_manager:
-                current_space = self.workspace_manager.current_space
-                if current_space:
-                    # Get space config for the current workspace
-                    space_config = self.workspace_manager.spaces.get(current_space)
-                    if space_config:
-                        workspace_config = WorkspaceContextConfig(
-                            workspace_id=workspace_id,
-                            workspace_prompt=space_config.workspace_prompt or "",
-                            scope=space_config.scope or "",
-                            metadata=space_config.metadata,
-                            debug=logger.isEnabledFor(logging.DEBUG)
-                        )
+                space_config = self.workspace_manager.get_current_space_config()
+                if space_config:
+                    workspace_config = WorkspaceContextConfig(
+                        workspace_id=workspace_id,
+                        workspace_prompt=space_config.get("workspace_prompt", ""),
+                        scope=space_config.get("scope", ""),
+                        metadata=space_config.get("metadata", {}),
+                        debug=logger.isEnabledFor(logging.DEBUG)
+                    )
+                    
+                    # Build role config if role_id is provided and roles exist
+                    role_config = None
+                    roles = space_config.get("roles", [])
+                    if role_id and roles:
+                        # Find role in space config
+                        role = next((r for r in roles if r["name"] == role_id), None)
+                        if role:
+                            logger.debug(f"Found role configuration for {role_id}")
+                            role_config = RoleContextConfig(
+                                role_id=role_id,
+                                role_name=role.get("role_name", ""),
+                                role_description=role.get("role_description", ""),
+                                prompt_context=role.get("prompt_context", ""),
+                                metadata=role.get("metadata", {}),
+                                debug=logger.isEnabledFor(logging.DEBUG)
+                            )
+                        else:
+                            logger.warning(f"Role {role_id} not found in workspace {workspace_id}")
             
             # Build RAG config if available
             rag_config = None
@@ -179,20 +216,27 @@ class CoreAgent(MessageProcessor):
                         debug=logger.isEnabledFor(logging.DEBUG)
                     )
             
-            # Assemble final prompt
-            assembler_config = PromptAssemblerConfig(
+            # Assemble final config
+            return PromptAssemblerConfig(
                 system_config=system_config,
                 workspace_config=workspace_config,
+                role_config=role_config if 'role_config' in locals() else None,
                 rag_config=rag_config,
                 preferences_config=preferences_config,
                 debug=logger.isEnabledFor(logging.DEBUG)
             )
             
-            return PromptAssembler.assemble(assembler_config)
-            
         except Exception as e:
-            logger.error(f"Error building prompt: {str(e)}", exc_info=True)
-            return self.system_prompt  # Fallback to basic system prompt
+            logger.error(f"Error preparing prompt config: {str(e)}", exc_info=True)
+            # Return basic config as fallback
+            return PromptAssemblerConfig(
+                system_config=SystemPromptConfig(
+                    context_prompt=self.system_prompt,
+                    workspace_scope=workspace_id or "",
+                    debug=logger.isEnabledFor(logging.DEBUG)
+                ),
+                debug=logger.isEnabledFor(logging.DEBUG)
+            )
 
     def _handle_interaction(self, query: str, results: any) -> str:
         """
@@ -217,9 +261,9 @@ class CoreAgent(MessageProcessor):
             if workspace_config:
                 context.update({
                     "workspace": {
-                        "name": workspace_config.name,
-                        "context": workspace_config.metadata.get("context"),
-                        "tags": workspace_config.tags
+                        "name": workspace_config.get("name"),
+                        "context": workspace_config.get("metadata", {}).get("context"),
+                        "tags": workspace_config.get("tags")
                     }
                 })
         return context
@@ -244,8 +288,10 @@ class CoreAgent(MessageProcessor):
         """
         logger.info(f"Running agent with workspace_id={workspace_id}, role_id={role_id}")
         
-        # Build prompt with all context
-        prompt = self._build_prompt(user_query, workspace_id, role_id)
+        # Prepare prompt configuration and build final prompt
+        config = self._prepare_prompt_config(user_query, workspace_id, role_id)
+        prompt = PromptAssembler.assemble(config)
+        
         logger.debug(f"##DEBUG## Using final prompt: {prompt}...")
         
         # On demande au LLM de générer une réponse

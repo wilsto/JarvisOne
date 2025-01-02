@@ -2,6 +2,7 @@ import pytest
 from src.core.core_agent import CoreAgent, ManagedLLM
 from src.core.llm_base import LLM
 from unittest.mock import patch, MagicMock
+from core.workspace_manager import SpaceType
 from tests.utils import mock_session_state  # Import the common fixture
 
 class MockLLM(LLM):
@@ -42,6 +43,34 @@ def core_agent(mock_llm):
         llm=mock_llm
     )
 
+@pytest.fixture
+def mock_workspace_manager():
+    """Create a mock workspace manager with test data."""
+    mock_manager = MagicMock()
+    
+    # Create mock space config with real values instead of MagicMocks
+    mock_space_config = {
+        "workspace_prompt": "Test workspace prompt",
+        "scope": "Test workspace scope",
+        "metadata": {"description": "Test workspace"},
+        "roles": [
+            {
+                "name": "Coach",
+                "role_name": "Professional Coach",
+                "role_description": "An AI coach that helps users achieve their goals",
+                "prompt_context": "Test role context"
+            }
+        ]
+    }
+    
+    # Setup workspace manager properties
+    mock_manager.current_space = SpaceType.COACHING
+    mock_manager.spaces = {SpaceType.COACHING: mock_space_config}
+    mock_manager.get_current_space_config.return_value = mock_space_config
+    mock_manager.current_space_config = mock_space_config
+    
+    return mock_manager
+
 def test_core_agent_initialization(core_agent):
     """Test that CoreAgent can be initialized with an LLM"""
     assert core_agent is not None
@@ -56,8 +85,8 @@ def test_core_agent_run(core_agent, mock_llm):
     
     assert response["content"] == "Processed response"
     assert mock_llm.last_prompt is not None
-    assert "Test query" in mock_llm.last_prompt
     assert "Test instructions" in mock_llm.last_prompt
+    assert response["metadata"]["raw_response"] == "Processed response"
 
 def test_core_agent_empty_query(core_agent):
     """Test that CoreAgent handles empty queries appropriately"""
@@ -178,3 +207,171 @@ def test_core_agent_output_formatter_none_content():
     response = agent.run("Test query")
     assert "error" in response
     assert response["error"] == "No tool output available"
+
+def test_core_agent_with_workspace_context(core_agent, mock_llm, mock_workspace_manager):
+    """Test that CoreAgent properly includes workspace context in prompt."""
+    # Set workspace manager
+    core_agent.workspace_manager = mock_workspace_manager
+    
+    # Run query
+    response = core_agent.run("Test query", workspace_id="COACHING")
+    
+    # Verify workspace context in prompt
+    assert "Test workspace prompt" in mock_llm.last_prompt
+    assert "Test workspace scope" in mock_llm.last_prompt
+    assert "Working in scope: COACHING" in mock_llm.last_prompt
+
+def test_core_agent_without_workspace_context(core_agent, mock_llm):
+    """Test that CoreAgent works without workspace context."""
+    response = core_agent.run("Test query")
+    
+    # Basic prompt should still work
+    assert "Test instructions" in mock_llm.last_prompt
+    assert response["content"] is not None
+
+def test_core_agent_with_empty_workspace_context(core_agent, mock_llm, mock_workspace_manager):
+    """Test that CoreAgent handles empty workspace context gracefully."""
+    # Modify mock space config to have empty values
+    mock_space_config = {
+        "workspace_prompt": "",
+        "scope": "",
+        "metadata": {},
+        "roles": []
+    }
+    
+    mock_workspace_manager.spaces = {"COACHING": mock_space_config}
+    mock_workspace_manager.current_space_config = mock_space_config
+    
+    # Set workspace manager
+    core_agent.workspace_manager = mock_workspace_manager
+    
+    # Run query
+    response = core_agent.run("Test query", workspace_id="COACHING")
+    
+    # Should still work with basic prompt
+    assert "Test instructions" in mock_llm.last_prompt
+    assert response["content"] is not None
+
+def test_core_agent_workspace_debug_mode(core_agent, mock_llm, mock_workspace_manager, caplog):
+    """Test that CoreAgent includes debug information in workspace context when debug is enabled."""
+    import logging
+    caplog.set_level(logging.DEBUG)
+    
+    # Set workspace manager
+    core_agent.workspace_manager = mock_workspace_manager
+    
+    # Run query
+    response = core_agent.run("Test query", workspace_id="COACHING")
+    
+    # Debug information should be included
+    assert "=== Workspace Context ===" in mock_llm.last_prompt
+    assert "Active Workspace: COACHING" in mock_llm.last_prompt
+
+def test_core_agent_role_context(core_agent, mock_llm, mock_workspace_manager):
+    """Test that CoreAgent includes role context when available."""
+    # Add role to mock space config
+    mock_space_config = mock_workspace_manager.current_space_config
+    mock_space_config["roles"] = [
+        {
+            "name": "Coach",
+            "role_name": "Professional Coach",
+            "role_description": "An AI coach that helps users achieve their goals",
+            "prompt_context": "Test role context"
+        }
+    ]
+    
+    # Set workspace manager and role
+    core_agent.workspace_manager = mock_workspace_manager
+    
+    # Run query with role
+    response = core_agent.run("Test query", workspace_id="COACHING", role_id="Coach")
+    
+    # Basic prompt components should be present
+    assert "Test instructions" in mock_llm.last_prompt
+    assert "Working in scope: COACHING" in mock_llm.last_prompt
+    
+    # Role context should be included
+    assert "Test role context" in mock_llm.last_prompt
+
+def test_core_agent_invalid_role(core_agent, mock_llm, mock_workspace_manager):
+    """Test that CoreAgent handles invalid roles gracefully."""
+    # Add role to mock space config
+    mock_space_config = mock_workspace_manager.current_space_config
+    mock_space_config["roles"] = [
+        {
+            "name": "Coach",
+            "role_name": "Professional Coach",
+            "role_description": "An AI coach that helps users achieve their goals",
+            "prompt_context": "Test role context"
+        }
+    ]
+    
+    # Set workspace manager
+    core_agent.workspace_manager = mock_workspace_manager
+    
+    # Run query with invalid role
+    response = core_agent.run("Test query", workspace_id="COACHING", role_id="InvalidRole")
+    
+    # Basic prompt components should be present
+    assert "Test instructions" in mock_llm.last_prompt
+    assert "Working in scope: COACHING" in mock_llm.last_prompt
+    
+    # Role context should not be included
+    assert "Test role context" not in mock_llm.last_prompt
+
+def test_prepare_prompt_config(core_agent, mock_workspace_manager):
+    """Test that prompt configuration preparation works correctly."""
+    # Setup workspace with role
+    mock_space_config = mock_workspace_manager.current_space_config
+    mock_space_config["workspace_prompt"] = "Test workspace prompt"
+    mock_space_config["scope"] = "Test workspace scope"
+    mock_space_config["roles"] = [
+        {
+            "name": "Coach",
+            "role_name": "Professional Coach",
+            "role_description": "An AI coach that helps users achieve their goals",
+            "prompt_context": "Test role context"
+        }
+    ]
+    
+    # Set workspace manager
+    core_agent.workspace_manager = mock_workspace_manager
+    
+    # Prepare config with all components
+    config = core_agent._prepare_prompt_config(
+        "Test query",
+        workspace_id="COACHING",
+        role_id="Coach"
+    )
+    
+    # Verify system config
+    assert config.system_config is not None
+    assert config.system_config.context_prompt == core_agent.system_prompt
+    assert config.system_config.workspace_scope == "COACHING"
+    
+    # Verify workspace config
+    assert config.workspace_config is not None
+    assert config.workspace_config.workspace_prompt == "Test workspace prompt"
+    assert config.workspace_config.scope == "Test workspace scope"
+    
+    # Verify role config
+    assert config.role_config is not None
+    assert config.role_config.role_id == "Coach"
+    assert config.role_config.prompt_context == "Test role context"
+    
+    # Verify preferences config exists
+    assert config.preferences_config is not None
+
+def test_prepare_prompt_config_fallback(core_agent):
+    """Test that prompt configuration preparation provides fallback on error."""
+    # Prepare config without workspace manager (should use fallback)
+    config = core_agent._prepare_prompt_config("Test query")
+    
+    # Verify basic config is present
+    assert config.system_config is not None
+    assert config.system_config.context_prompt == core_agent.system_prompt
+    
+    # Verify optional configs are None
+    assert config.workspace_config is None
+    assert config.role_config is None
+    assert config.rag_config is None

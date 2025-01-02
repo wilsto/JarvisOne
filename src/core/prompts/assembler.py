@@ -1,4 +1,27 @@
-"""Prompt assembly component."""
+"""Prompt assembly component implementing the Builder pattern.
+
+This module is responsible for assembling the final prompt from various components
+using the Builder pattern. The PromptAssembler acts as the Builder, while the
+individual component builders (SystemPromptBuilder, WorkspaceContextBuilder, etc.)
+act as the ConcreteBuilders.
+
+The assembly process follows a specific order to ensure consistency:
+1. System instructions (required base)
+2. Preferences (optional customization)
+3. Workspace context (optional workspace-specific content)
+4. Role context (optional role-specific behavior)
+5. RAG context (optional relevant documents)
+
+Example:
+    config = PromptAssemblerConfig(
+        system_config=SystemPromptConfig(...),
+        workspace_config=WorkspaceContextConfig(...),
+        role_config=RoleContextConfig(...),
+        rag_config=RAGContextConfig(...),
+        preferences_config=PreferencesConfig(...)
+    )
+    final_prompt = PromptAssembler.assemble(config)
+"""
 
 import logging
 from dataclasses import dataclass
