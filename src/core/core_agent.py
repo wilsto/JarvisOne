@@ -152,13 +152,18 @@ class CoreAgent(MessageProcessor):
             # Build workspace config if available
             workspace_config = None
             if workspace_id and self.workspace_manager:
-                workspace_context = self.workspace_manager.get_current_context_prompt()
-                if workspace_context:
-                    workspace_config = WorkspaceContextConfig(
-                        workspace_id=workspace_id,
-                        metadata={'context': workspace_context},
-                        debug=logger.isEnabledFor(logging.DEBUG)
-                    )
+                current_space = self.workspace_manager.current_space
+                if current_space:
+                    # Get space config for the current workspace
+                    space_config = self.workspace_manager.spaces.get(current_space)
+                    if space_config:
+                        workspace_config = WorkspaceContextConfig(
+                            workspace_id=workspace_id,
+                            workspace_prompt=space_config.workspace_prompt or "",
+                            scope=space_config.scope or "",
+                            metadata=space_config.metadata,
+                            debug=logger.isEnabledFor(logging.DEBUG)
+                        )
             
             # Build RAG config if available
             rag_config = None

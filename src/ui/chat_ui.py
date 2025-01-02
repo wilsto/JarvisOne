@@ -27,16 +27,12 @@ def init_chat_session():
         
         if workspace_manager:
             current_space_config = workspace_manager.get_current_space_config()
-            
-            if current_space_config and hasattr(current_space_config, 'metadata'):
-                scope = current_space_config.metadata.get('scope', '')
+            if current_space_config:
+                scope = current_space_config.scope or ''
                 welcome_message = generate_welcome_message(scope)
             else:
                 # Fallback welcome message if no scope defined
-                welcome_message = (
-                    "👋 Bonjour, je suis JarvisOne, votre assistant IA !\n\n"
-                    "Comment puis-je vous aider aujourd'hui ?"
-                )
+                welcome_message = generate_welcome_message('')
         else:
             # Fallback welcome message if no workspace manager
             welcome_message = (

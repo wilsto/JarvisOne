@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 class WorkspaceContextConfig:
     """Configuration for workspace context building."""
     workspace_id: str
-    metadata: Dict[str, Any]
+    workspace_prompt: str
+    scope: str
+    metadata: Optional[Dict[str, Any]] = None  # For internal use only, not included in prompt
     debug: bool = False
 
 class WorkspaceContextBuilder:
@@ -35,17 +37,23 @@ class WorkspaceContextBuilder:
             if config.debug:
                 sections.append("=== Workspace Context ===")
                 
-            if config.workspace_id:
+            # Workspace identification
+            if config.debug:
                 sections.append(f"Active Workspace: {config.workspace_id}")
-                
-            if config.metadata and 'context' in config.metadata:
-                sections.append(config.metadata['context'])
-            elif config.metadata:
-                sections.append("Workspace Configuration:")
-                for key, value in config.metadata.items():
-                    sections.append(f"- {key}: {value}")
+            
+            # Workspace prompt
+            if config.workspace_prompt:
+                if config.debug:
+                    sections.append("=== Workspace Instructions ===")
+                sections.append(config.workspace_prompt)
+            
+            # Workspace scope
+            if config.scope:
+                if config.debug:
+                    sections.append("=== Workspace Scope ===")
+                sections.append(config.scope)
                     
-            return "\n".join(sections)
+            return "\n\n".join(sections)
             
         except Exception as e:
             logger.error("Error building workspace context: %s", e)
