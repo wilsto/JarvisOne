@@ -49,40 +49,33 @@ CARD_STYLE = """
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .conversation-card-time {
-        font-size: 0.8em;
-        color: #777;
-        white-space: nowrap;
-        margin-left: 8px;
-    }
     .conversation-card-details {
         display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    .conversation-card-time-container {
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        width: 100%;
+        gap: 4px;
+    }
+    .conversation-card-time {
+        color: #666;
+        font-size: 0.9em;
     }
     .conversation-card-last-message {
-        font-size: 0.9em;
         color: #666;
-        line-height: 1.4;
+        font-size: 0.9em;
+        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        word-break: break-word;
     }
-    /* Style for the button */
     .stButton button {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        cursor: pointer;
-        margin: 0;
-        padding: 0;
+        border: none;
+        background-color: transparent;
     }
+}
 """
 def render_conversation_history(
     conversations: List[Dict],
@@ -132,7 +125,7 @@ def render_conversation_item(
     title = conversation["title"] or "New Chat"
     timestamp = format_timestamp(conversation["last_timestamp"])
     
-    # Check if this conversation is being loaded
+    # Check if this conversation is being loading
     is_loading = st.session_state.get('loading_conversation', False) and conversation["id"] == current_conversation_id
     
     # Safely get and truncate the last message
@@ -153,25 +146,31 @@ def render_conversation_item(
         if is_loading:
             st.spinner("Loading conversation...")
         
-        # Render the conversation card with loading state
-        background_color = "#e8f0fe" if is_active else ""
-        opacity = "0.7" if is_loading else "1"
+        # Create columns for layout
+        title_col, time_col = st.columns([4, 1])
         
-        st.markdown(f"""
-            <div class="conversation-card" style='background-color: {background_color}; opacity: {opacity}'>
-                <div class="conversation-card-details">
-                    <span class="conversation-card-title">{title}</span>
-                    <span class="conversation-card-time">{timestamp}</span>
+        with title_col:
+            st.markdown(f"""
+                <div style='background-color: {"#e8f0fe" if is_active else ""}; opacity: {"0.7" if is_loading else "1"}; padding: 8px; border-radius: 8px;'>
+                    <div style='font-weight: bold; font-size: 1.1em; color: #2c3e50;'>{title}</div>
+                    <div style='color: #666; font-size: 0.9em; margin-top: 4px;'>{last_message}</div>
                 </div>
-                <div class="conversation-card-last-message" title="{last_message}">
-                    {last_message}
-                </div>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+                """, 
+                unsafe_allow_html=True
+            )
         
-        # Add an invisible button that covers the entire container
-        # Disable button if conversation is loading
-        if not is_loading and st.button("", key=f"conv_{conversation['id']}", help=title):
-            on_conversation_selected(conversation["id"])
+        with time_col:
+            st.markdown(f"""
+                <div style='text-align: center;'>
+                    <div style='color: #666; font-size: 0.9em;'>{timestamp}
+                """,
+                unsafe_allow_html=True
+            )
+            if not is_loading:
+                st.button("🔄", key=f"reload_{conversation['id']}", help="Reload conversation", on_click=lambda: on_conversation_selected(conversation["id"]))
+
+            st.markdown(f"""
+               </div> </div>
+                """,
+                unsafe_allow_html=True
+            )                
