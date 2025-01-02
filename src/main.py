@@ -299,7 +299,7 @@ st.set_page_config(
 )
 
 # Load and apply CSS styles
-st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
+# st.markdown(f"<style>{get_all_styles()}</style>", unsafe_allow_html=True)
 
 # Initialize session state first
 initialize_session_state()
