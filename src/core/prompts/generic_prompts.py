@@ -84,7 +84,7 @@ def modify_prompt_by_preferences(creativity_level: int, style_level: int, length
     )
 
 def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
-    """Build the complete system prompt by combining context-specific and generic prompts.
+    """Legacy wrapper for backward compatibility.
     
     Args:
         context_prompt (str): The context-specific system prompt
@@ -93,25 +93,15 @@ def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
     Returns:
         str: The complete system prompt
     """
-    # Get slider values from session state, defaulting to balanced settings
-    import streamlit as st
-    creativity = st.session_state.get('llm_creativity', 1)
-    style = st.session_state.get('llm_style', 1)
-    length = st.session_state.get('llm_length', 1)
-    logger.info(f"Retrieved LLM preferences: creativity={creativity}, style={style}, length={length}")
+    from .components import SystemPromptBuilder, SystemPromptConfig
     
-    # Generate the modified characteristics and format
-    modified_prompt = modify_prompt_by_preferences(creativity, style, length)
-    
-    return (
-        context_prompt
-        + "\n\n"
-        + modified_prompt
-        + "\n\n"
-        + GENERIC_UNCERTAINTY_RESPONSE
-        + "\n\nYour scope includes:\n"
-        + workspace_scope
+    config = SystemPromptConfig(
+        context_prompt=context_prompt,
+        workspace_scope=workspace_scope,
+        debug=logger.isEnabledFor(logging.DEBUG)
     )
+    
+    return SystemPromptBuilder.build(config)
 
 def get_llm_temperature() -> float:
     """Get the LLM temperature based on current creativity level.

@@ -1,0 +1,81 @@
+@startuml prompt_flow
+
+|#lightgreen|CoreAgent|
+start
+:Réception de la requête utilisateur;
+:_build_prompt() 
+Initialisation de la construction du prompt;
+
+|#pink|SystemPromptBuilder|
+:Construction du prompt système;
+:SystemPromptBuilder.build()
+Combine les instructions système
+et le scope du workspace;
+note right
+  Utilise:
+  - Instructions système
+  - Scope du workspace
+  - Mode debug
+end note
+
+|#lightblue|PreferencesBuilder|
+:Construction des préférences;
+:PreferencesBuilder.build()
+Configure le style de réponse;
+note right
+  Paramètres:
+  - Niveau de créativité
+  - Style de communication
+  - Longueur des réponses
+end note
+
+|#lightsalmon|WorkspaceContextBuilder|
+:Construction du contexte workspace;
+:WorkspaceContextBuilder.build()
+Intègre le contexte du workspace actif;
+note right
+  Inclut:
+  - ID du workspace
+  - Métadonnées
+  - Contexte brut
+end note
+
+|#lightcoral|RAGContextBuilder|
+:Construction du contexte RAG;
+if (RAG activé?) then (oui)
+  :RAGContextBuilder.build()
+  Recherche et formate les documents pertinents;
+  note right
+    Traite:
+    - Documents trouvés
+    - Métadonnées sources
+    - Scores pertinence
+  end note
+else (non)
+  :Skip RAG context;
+endif
+
+|#lightyellow|PromptAssembler|
+:Assemblage final du prompt;
+:PromptAssembler.assemble()
+Combine tous les composants;
+note right
+  Ordre d'assemblage:
+  1. Prompt système
+  2. Préférences
+  3. Contexte workspace
+  4. Contexte RAG
+end note
+
+|#lightgreen|CoreAgent|
+:Validation du prompt final;
+if (Debug mode?) then (oui)
+  :Ajoute les marqueurs de section
+  et les informations de debug;
+else (non)
+  :Format standard;
+endif
+:Retourne le prompt complet;
+stop
+
+@enduml

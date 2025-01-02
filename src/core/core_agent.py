@@ -8,6 +8,18 @@ from typing import List
 from pathlib import Path
 from rag.processor import MessageProcessor
 from rag.query_handler import RAGQueryHandler
+from .prompts.components import (
+    SystemPromptBuilder,
+    WorkspaceContextBuilder,
+    RAGContextBuilder,
+    PreferencesBuilder,
+    SystemPromptConfig,
+    WorkspaceContextConfig,
+    RAGContextConfig,
+    PreferencesConfig,
+    RAGDocument
+)
+from .prompts.assembler import PromptAssembler, PromptAssemblerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -124,37 +136,58 @@ class CoreAgent(MessageProcessor):
             return ""
 
     def _build_prompt(self, user_query: str, workspace_id: str = None, role_id: str = None) -> str:
-        """Build the prompt for the LLM."""
-        prompt_parts = []
-        
-        # Add system prompt with preferences
-        prompt_parts.append("=== System Instructions ===")
-        if self.system_prompt:
-            from core.prompts.generic_prompts import build_system_prompt
-            modified_prompt = build_system_prompt(self.system_prompt, workspace_id or "")
-            prompt_parts.append(modified_prompt)
+        """Build the prompt for the LLM using the new component-based architecture."""
+        try:
+            # Initialize configs
+            system_config = SystemPromptConfig(
+                context_prompt=self.system_prompt,
+                workspace_scope=workspace_id or "",
+                debug=logger.isEnabledFor(logging.DEBUG)
+            )
             
-        # Add workspace context if available
-        prompt_parts.append("=== Workspace Context ===")
-        if workspace_id and self.workspace_manager:
-            workspace_context = self.workspace_manager.get_current_context_prompt()
-            if workspace_context:
-                prompt_parts.append(workspace_context)
-
-
-        # Add RAG context if available
-        prompt_parts.append("=== RAG Context ===")
-        if workspace_id and self.rag_handler:
-            rag_context = self._get_rag_context(user_query, workspace_id, role_id)
-            if rag_context:
-                prompt_parts.append(rag_context)
-        
-        # Add user query
-        prompt_parts.append("=== User Query ===")
-        prompt_parts.append(user_query)
-        
-        # Combine all parts with double line breaks
-        return "\n\n".join(prompt_parts)
+            preferences_config = PreferencesConfig(
+                debug=logger.isEnabledFor(logging.DEBUG)
+            )
+            
+            # Build workspace config if available
+            workspace_config = None
+            if workspace_id and self.workspace_manager:
+                workspace_context = self.workspace_manager.get_current_context_prompt()
+                if workspace_context:
+                    workspace_config = WorkspaceContextConfig(
+                        workspace_id=workspace_id,
+                        metadata={'context': workspace_context},
+                        debug=logger.isEnabledFor(logging.DEBUG)
+                    )
+            
+            # Build RAG config if available
+            rag_config = None
+            if workspace_id and self.rag_handler:
+                rag_context = self._get_rag_context(user_query, workspace_id, role_id)
+                if rag_context:
+                    rag_config = RAGContextConfig(
+                        query=user_query,
+                        documents=[RAGDocument(
+                            content=rag_context,
+                            metadata={'file_path': 'RAG System'}
+                        )],
+                        debug=logger.isEnabledFor(logging.DEBUG)
+                    )
+            
+            # Assemble final prompt
+            assembler_config = PromptAssemblerConfig(
+                system_config=system_config,
+                workspace_config=workspace_config,
+                rag_config=rag_config,
+                preferences_config=preferences_config,
+                debug=logger.isEnabledFor(logging.DEBUG)
+            )
+            
+            return PromptAssembler.assemble(assembler_config)
+            
+        except Exception as e:
+            logger.error(f"Error building prompt: {str(e)}", exc_info=True)
+            return self.system_prompt  # Fallback to basic system prompt
 
     def _handle_interaction(self, query: str, results: any) -> str:
         """
