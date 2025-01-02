@@ -109,3 +109,8 @@ def display_chat():
             response = chat_processor.process_user_input(prompt)
             st.markdown(response)
             chat_processor.add_message("assistant", response)
+    
+    # Check if we need to rerun the app (e.g., after loading a conversation)
+    if st.session_state.get('should_rerun', False):
+        st.session_state.should_rerun = False  # Reset the flag
+        st.rerun()

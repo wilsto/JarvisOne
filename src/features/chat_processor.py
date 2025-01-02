@@ -170,17 +170,45 @@ class ChatProcessor:
             return f"❌ {error_msg}"
 
     def load_conversation(self, conversation_id: str):
-        """Load a specific conversation from the database."""
-        conversation = self.repository.get_conversation(conversation_id)
-        if conversation:
+        """Load a specific conversation from the database.
+        
+        Args:
+            conversation_id (str): ID of the conversation to load
+        
+        Returns:
+            bool: True if conversation loaded successfully, False otherwise
+        """
+        try:
+            # Set loading state
+            st.session_state.loading_conversation = True
+            
+            # Load conversation from repository
+            conversation = self.repository.get_conversation(conversation_id)
+            if not conversation:
+                logger.warning(f"Conversation {conversation_id} not found")
+                return False
+                
+            # Update session state with conversation messages
             st.session_state.messages = [
                 {"role": msg["role"], "content": msg["content"]}
                 for msg in conversation["messages"]
             ]
             st.session_state.current_conversation_id = conversation_id
+            
+            # Force streamlit to rerun to update UI
+            st.session_state.should_rerun = True
+            
             logger.info(f"Loaded conversation {conversation_id}")
-        else:
-            logger.warning(f"Conversation {conversation_id} not found")
+            return True
+            
+        except Exception as e:
+            error_msg = f"Failed to load conversation {conversation_id}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return False
+            
+        finally:
+            # Clear loading state
+            st.session_state.loading_conversation = False
 
     def new_conversation(self, workspace=None):
         """Start a new conversation."""

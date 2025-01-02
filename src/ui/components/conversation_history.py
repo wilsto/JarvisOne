@@ -132,6 +132,9 @@ def render_conversation_item(
     title = conversation["title"] or "New Chat"
     timestamp = format_timestamp(conversation["last_timestamp"])
     
+    # Check if this conversation is being loaded
+    is_loading = st.session_state.get('loading_conversation', False) and conversation["id"] == current_conversation_id
+    
     # Safely get and truncate the last message
     try:
         last_message = conversation.get("messages", [])[-1].get("content", "No message")
@@ -146,9 +149,16 @@ def render_conversation_item(
     # Create container for better layout
     container = st.container()
     with container:
-        # Render the conversation card
+        # Add loading spinner if conversation is being loaded
+        if is_loading:
+            st.spinner("Loading conversation...")
+        
+        # Render the conversation card with loading state
+        background_color = "#e8f0fe" if is_active else ""
+        opacity = "0.7" if is_loading else "1"
+        
         st.markdown(f"""
-            <div class="conversation-card" style='{"background-color: #e8f0fe;" if is_active else ""}'>
+            <div class="conversation-card" style='background-color: {background_color}; opacity: {opacity}'>
                 <div class="conversation-card-details">
                     <span class="conversation-card-title">{title}</span>
                     <span class="conversation-card-time">{timestamp}</span>
@@ -162,5 +172,6 @@ def render_conversation_item(
         )
         
         # Add an invisible button that covers the entire container
-        if st.button("", key=f"conv_{conversation['id']}", help=title):
+        # Disable button if conversation is loading
+        if not is_loading and st.button("", key=f"conv_{conversation['id']}", help=title):
             on_conversation_selected(conversation["id"])
