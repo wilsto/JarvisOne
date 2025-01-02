@@ -92,23 +92,33 @@ def display_chat():
     # Render the sidebar
     render_sidebar()
 
-    # Display chat messages
-    for message in chat_processor.get_messages():
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # Create a container for messages
+    messages_container = st.container()
+    
+    # Display chat messages in the messages container
+    with messages_container:
+        for message in chat_processor.get_messages():
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-    # Accept user input
-    if prompt := st.chat_input("Parlez à JarvisOne"):
-        # Add and display user message
-        chat_processor.add_message("user", prompt)
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    # Create the input container last so it stays at the bottom
+    input_container = st.container()
+    
+    # Accept user input in the bottom container
+    with input_container:
+        if prompt := st.chat_input("Parlez à JarvisOne", key="chat_input"):
+            # Add and display user message
+            chat_processor.add_message("user", prompt)
+            with messages_container:
+                with st.chat_message("user"):
+                    st.markdown(prompt)
 
-        # Get and display bot response
-        with st.chat_message("assistant"):
-            response = chat_processor.process_user_input(prompt)
-            st.markdown(response)
-            chat_processor.add_message("assistant", response)
+            # Get and display bot response
+            with messages_container:
+                with st.chat_message("assistant"):
+                    response = chat_processor.process_user_input(prompt)
+                    st.markdown(response)
+                    chat_processor.add_message("assistant", response)
     
     # Check if we need to rerun the app (e.g., after loading a conversation)
     if st.session_state.get('should_rerun', False):
