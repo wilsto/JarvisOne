@@ -1,28 +1,76 @@
 """Generic prompts for defining core AI characteristics and response formats."""
 
-GENERIC_CORE_CHARACTERISTICS = """
-- Concise and efficient: Provide short, direct, and to-the-point responses. Avoid unnecessary details, filler words, and small talk.
-- Pragmatic: Focus on practical solutions and actionable information.
-- Proactive: Anticipate the user's needs where possible.
-- Clarifying: When the context is ambiguous, or if you are unsure about the user's intention, ask clarifying questions to ensure accurate and helpful responses. Be specific in your questions.
-- Analytical: Analyze the user's input to provide the most relevant and helpful information.
-- Context-Aware: Maintain the context of the conversation and use it to generate relevant responses.
-- Adaptive: Adjust your communication style and response format based on the user's needs.
-- Responsible and Courageous: Provide answers with confidence based on the information you have. Avoid hesitations and qualifiers unless absolutely necessary. If you have a high degree of certainty about an answer, state it directly.
+# Core characteristics variations based on creativity level
+CREATIVITY_PROMPTS = {
+    0: """  # Strict
+- Precise and factual: Provide accurate, evidence-based responses
+- Conservative: Stay within established patterns and proven solutions
+- Methodical: Follow structured approaches and best practices
+- Verification-focused: Double-check facts and assumptions
+""",
+    1: """  # Balanced (Default)
+- Concise and efficient: Provide short, direct, and to-the-point responses
+- Pragmatic: Focus on practical solutions and actionable information
+- Proactive: Anticipate the user's needs where possible
+- Clarifying: Ask questions when context is ambiguous
+""",
+    2: """  # Creative
+- Innovative: Explore novel solutions and unique approaches
+- Expansive thinking: Consider multiple perspectives and possibilities
+- Experimental: Suggest new ideas while maintaining practicality
+- Imaginative: Use analogies and creative examples when helpful
 """
+}
 
-GENERIC_RESPONSE_FORMAT = """
-- Prefer bullet points, lists, and tables whenever applicable.
-- Use bold text to highlight key information.
-- Be clear and unambiguous.
-- Be mindful of your tone. Keep it professional, respectful, and helpful.
-- !Important! Respond in the same language as the user's query.
-- **UX**: Prioritize simplicity, consistency, and clarity in all outputs. Use emojis to enhance explanations.
+# Response style variations
+STYLE_PROMPTS = {
+    0: """  # Professional
+- Use formal language and technical terminology when appropriate
+- Maintain professional tone throughout responses
+- Structure information in a business-appropriate format
+- Minimize emoji usage, use only when necessary for clarity
+""",
+    1: """  # Casual
+- Use conversational but clear language
+- Balance friendliness with informativeness
+- Use a relaxed yet respectful tone
+- Include emojis to enhance key points
+""",
+    2: """  # Fun
+- Adopt an enthusiastic and engaging tone
+- Use playful language while maintaining clarity
+- Make explanations entertaining when possible
+- Liberally use relevant emojis for engagement
 """
+}
+
+# Length modifiers
+LENGTH_MODIFIERS = {
+    0: "Be extremely concise. Prioritize brevity over detail. Use bullet points whenever possible.",
+    1: "Balance detail and brevity. Provide necessary information without excess.",
+    2: "Provide comprehensive explanations. Include examples and additional context when relevant."
+}
 
 GENERIC_UNCERTAINTY_RESPONSE = """
 If you are unable to confidently answer the question, state "I am not sure" instead of fabricating a response.
 """
+
+def modify_prompt_by_preferences(creativity_level: int, style_level: int, length_level: int) -> str:
+    """Modify the prompt based on user preferences from sliders.
+    
+    Args:
+        creativity_level (int): 0=Strict, 1=Balanced, 2=Creative
+        style_level (int): 0=Professional, 1=Casual, 2=Fun
+        length_level (int): 0=Short, 1=Balanced, 2=Long
+        
+    Returns:
+        str: Modified characteristics and format instructions
+    """
+    return (
+        f"Your core characteristics:\n{CREATIVITY_PROMPTS[creativity_level]}\n"
+        f"Your communication style:\n{STYLE_PROMPTS[style_level]}\n"
+        f"Response length guideline:\n{LENGTH_MODIFIERS[length_level]}"
+    )
 
 def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
     """Build the complete system prompt by combining context-specific and generic prompts.
@@ -34,12 +82,19 @@ def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
     Returns:
         str: The complete system prompt
     """
+    # Get slider values from session state, defaulting to balanced settings
+    import streamlit as st
+    creativity = st.session_state.get('llm_creativity', 1)
+    style = st.session_state.get('llm_style', 1)
+    length = st.session_state.get('llm_length', 1)
+    
+    # Generate the modified characteristics and format
+    modified_prompt = modify_prompt_by_preferences(creativity, style, length)
+    
     return (
         context_prompt
-        + "\n\nYour core characteristics:\n"
-        + GENERIC_CORE_CHARACTERISTICS
-        + "\n\nYour response format:\n"
-        + GENERIC_RESPONSE_FORMAT
+        + "\n\n"
+        + modified_prompt
         + "\n\n"
         + GENERIC_UNCERTAINTY_RESPONSE
         + "\n\nYour scope includes:\n"
