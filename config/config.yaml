@@ -17,8 +17,8 @@ logging:
 
 # LLM Configuration
 llm:
-  provider: OpenAI
-  model: gpt-4o-mini
+  provider: Google
+  model: gemini-2.0-flash-exp
   max_tokens: 2000
   temperature: 0.7
 
