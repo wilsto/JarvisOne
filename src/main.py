@@ -292,8 +292,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Get Help': 'https://github.com/yourusername/JarvisOne',
-        'Report a bug': "https://github.com/yourusername/JarvisOne/issues",
+        'Get Help': 'https://github.com/wilsto/JarvisOne',
+        'Report a bug': "https://github.com/wilsto/JarvisOne/issues",
         'About': "# JarvisOne\nA modular, scalable, conversational AI assistant."
     }
 )
