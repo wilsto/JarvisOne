@@ -4,7 +4,6 @@ import streamlit as st
 from datetime import datetime, timezone, timedelta
 import logging
 from typing import Optional, Callable, List, Dict
-from ..styles.sidebar import SIDEBAR_STYLE
 
 logger = logging.getLogger(__name__)
 

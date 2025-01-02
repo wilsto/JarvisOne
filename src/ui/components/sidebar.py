@@ -116,4 +116,41 @@ def render_sidebar():
                 
                 # Rerun to update UI with new role context
                 st.rerun()
-        
+
+        # Add a separator before the LLM control sliders
+        st.divider()
+                
+        # Initialize default values in session state if not present
+        if "llm_creativity" not in st.session_state:
+            st.session_state.llm_creativity = 1  # Default to balanced
+        if "llm_style" not in st.session_state:
+            st.session_state.llm_style = 1      # Default to Casual
+        if "llm_length" not in st.session_state:
+            st.session_state.llm_length = 1     # Default to balanced
+                
+        # Creativity slider
+        st.session_state.llm_creativity = st.select_slider(
+            "🎨 Creativity Level",
+            options=[0, 1, 2],
+            value=st.session_state.llm_creativity,
+            format_func=lambda x: ["Strict", "Balanced", "Creative"][x],
+            key="creativity_slider"
+        )
+
+        # Style slider
+        st.session_state.llm_style = st.select_slider(
+            "🎭 Response Style",
+            options=[0, 1, 2],
+            value=st.session_state.llm_style,
+            format_func=lambda x: ["Professional", "Casual", "Fun"][x],
+            key="style_slider"
+        )
+
+        # Length slider
+        st.session_state.llm_length = st.select_slider(
+            "📏 Response Length",
+            options=[0, 1, 2],
+            value=st.session_state.llm_length,
+            format_func=lambda x: ["Short", "Balanced", "Long"][x],
+            key="length_slider"
+        )
