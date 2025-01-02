@@ -113,12 +113,13 @@ def display_chat():
                 with st.chat_message("user"):
                     st.markdown(prompt)
 
-            # Get and display bot response
+            # Get and display bot response with spinner
             with messages_container:
                 with st.chat_message("assistant"):
-                    response = chat_processor.process_user_input(prompt)
-                    st.markdown(response)
-                    chat_processor.add_message("assistant", response)
+                    with st.spinner("JarvisOne is thinking..."):
+                        response = chat_processor.process_user_input(prompt)
+                        st.markdown(response)
+                        chat_processor.add_message("assistant", response)
     
     # Check if we need to rerun the app (e.g., after loading a conversation)
     if st.session_state.get('should_rerun', False):
