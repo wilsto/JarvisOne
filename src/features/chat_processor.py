@@ -222,6 +222,13 @@ class ChatProcessor:
         if "messages" not in st.session_state:
             st.session_state.messages = []
             
+        # Prevent duplicate messages during re-runs
+        if st.session_state.messages and \
+           st.session_state.messages[-1]["role"] == role and \
+           st.session_state.messages[-1]["content"] == content:
+            logger.debug("Skipping duplicate message")
+            return
+            
         # Add to session state
         st.session_state.messages.append({"role": role, "content": content})
         

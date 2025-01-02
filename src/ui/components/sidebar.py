@@ -65,8 +65,9 @@ def render_sidebar():
             # Log workspace change
             logger.info(f"Switched Workspace from {old_space} to {new_space}")
             
-            # Rerun to update UI
-            st.rerun()
+            # Only rerun if workspace actually changed
+            if old_space != new_space:
+                st.rerun()
         
         # Role Selection (if workspace has roles)
         workspace_manager = st.session_state.workspace_manager
