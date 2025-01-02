@@ -21,7 +21,7 @@ class ChatProcessor:
         try:
             self.orchestrator = AgentOrchestrator()
             # Conservative default: 50 messages ≈ 25k tokens (assuming ~500 tokens per message)
-            self.max_history_messages = 50
+            self.max_history_messages = 50  # TODO: Implement message history limit in add_message method
             
             # Initialize database
             db_path = Path(__file__).parent.parent.parent / "data" / "conversations.db"
@@ -80,29 +80,6 @@ class ChatProcessor:
         # Handle string or other cases
         return str(response)
     
-    def _format_conversation_history(self) -> str:
-        """Format conversation history for context."""
-        if not st.session_state.messages:
-            return ""
-        
-        # Use configurable number of recent messages
-        recent_messages = st.session_state.messages[-self.max_history_messages:]
-        
-        # Format messages with clear separation and metadata
-        formatted_messages = []
-        for msg in recent_messages:
-            role = msg["role"].upper()
-            content = msg["content"].strip()
-            formatted_messages.append(f"[{role}]\n{content}\n")
-        
-        formatted_history = "\n".join(formatted_messages)
-        
-        return (
-            "\n=== Conversation History ===\n"
-            f"{formatted_history}\n"
-            "=== End of History ===\n"
-        )
-
     def set_history_limit(self, limit: int) -> None:
         """Set the maximum number of messages to include in conversation history.
         
@@ -115,21 +92,6 @@ class ChatProcessor:
             
         self.max_history_messages = limit
         logger.info(f"Updated conversation history limit to {limit} messages")
-
-    def _combine_history_with_input(self, user_input: str) -> str:
-        """Combine conversation history with new user input.
-        
-        Args:
-            user_input: New user input to process
-        
-        Returns:
-            str: Combined history and input ready for processing
-        """
-        history = self._format_conversation_history()
-        if not history:
-            return user_input
-            
-        return f"{history}\n[USER]\n{user_input}"
 
     def process_user_input(self, user_input: str) -> str:
         """Process user input through the orchestrator and return formatted response."""
@@ -152,17 +114,24 @@ class ChatProcessor:
                     delattr(st.session_state, 'pending_workspace')
                 logger.info(f"Created new conversation {conversation.id} with title '{initial_title}' in workspace {workspace}")
             
-            # Combine history with input
-            combined_input = self._combine_history_with_input(user_input)
+            # Add user message to history
+            self.add_message("user", user_input)
             
             # Process through orchestrator with context
             response = self.orchestrator.process_query(
-                combined_input,
+                user_input,  # No need to combine with history as CoreAgent now handles it
                 workspace_id=workspace_id,
                 role_id=role_id
             )
             
-            return self._format_response(response)
+            # Format and add response to history
+            formatted_response = self._format_response(response)
+            self.add_message("assistant", formatted_response)
+            
+            # Update conversation metadata
+            self._update_conversation_metadata()
+            
+            return formatted_response
             
         except Exception as e:
             error_msg = f"Error processing input: {str(e)}"
@@ -170,17 +139,45 @@ class ChatProcessor:
             return f"❌ {error_msg}"
 
     def load_conversation(self, conversation_id: str):
-        """Load a specific conversation from the database."""
-        conversation = self.repository.get_conversation(conversation_id)
-        if conversation:
+        """Load a specific conversation from the database.
+        
+        Args:
+            conversation_id (str): ID of the conversation to load
+        
+        Returns:
+            bool: True if conversation loaded successfully, False otherwise
+        """
+        try:
+            # Set loading state
+            st.session_state.loading_conversation = True
+            
+            # Load conversation from repository
+            conversation = self.repository.get_conversation(conversation_id)
+            if not conversation:
+                logger.warning(f"Conversation {conversation_id} not found")
+                return False
+                
+            # Update session state with conversation messages
             st.session_state.messages = [
                 {"role": msg["role"], "content": msg["content"]}
                 for msg in conversation["messages"]
             ]
             st.session_state.current_conversation_id = conversation_id
+            
+            # Force streamlit to rerun to update UI
+            st.session_state.should_rerun = True
+            
             logger.info(f"Loaded conversation {conversation_id}")
-        else:
-            logger.warning(f"Conversation {conversation_id} not found")
+            return True
+            
+        except Exception as e:
+            error_msg = f"Failed to load conversation {conversation_id}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return False
+            
+        finally:
+            # Clear loading state
+            st.session_state.loading_conversation = False
 
     def new_conversation(self, workspace=None):
         """Start a new conversation."""

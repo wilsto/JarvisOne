@@ -1,0 +1,107 @@
+@startuml prompt_flow
+
+title Prompt Assembly Flow - Builder Pattern Implementation
+
+|#lightgreen|CoreAgent|
+start
+:Réception de la requête utilisateur;
+:_prepare_prompt_config()
+Prépare les configurations pour chaque composant;
+note right
+  Director dans le Builder pattern:
+  - Collecte les données
+  - Crée les configs
+  - Ne construit PAS le prompt
+end note
+
+|#pink|SystemPromptBuilder|
+:Construction du prompt système;
+:SystemPromptBuilder.build()
+Combine les instructions système
+et le scope du workspace;
+note right
+  Utilise:
+  - Instructions système
+  - Scope du workspace
+  - Mode debug
+end note
+
+|#lightblue|PreferencesBuilder|
+:Construction des préférences;
+:PreferencesBuilder.build()
+Configure le style de réponse;
+note right
+  Paramètres:
+  - Niveau de créativité
+  - Style de communication
+  - Longueur des réponses
+end note
+
+|#lightsalmon|WorkspaceContextBuilder|
+:Construction du contexte workspace;
+:WorkspaceContextBuilder.build()
+Intègre le contexte du workspace actif;
+note right
+  Inclut:
+  - ID du workspace
+  - Métadonnées
+  - Contexte brut
+  - Scope
+end note
+
+|#lightpink|RoleContextBuilder|
+:Construction du contexte de rôle;
+if (Role spécifié?) then (yes)
+  :RoleContextBuilder.build()
+  Intègre le contexte du rôle;
+  note right
+    Inclut:
+    - ID du rôle
+    - Prompt du rôle
+    - Comportements spécifiques
+  end note
+else (no)
+  :Skip role context;
+endif
+
+|#lightcoral|RAGContextBuilder|
+:Construction du contexte RAG;
+if (RAG activé?) then (yes)
+  :RAGContextBuilder.build()
+  Recherche et formate les documents pertinents;
+  note right
+    Traite:
+    - Documents trouvés
+    - Métadonnées sources
+    - Scores pertinence
+  end note
+else (no)
+  :Skip RAG context;
+endif
+
+|#lightyellow|PromptAssembler|
+:Assemblage final du prompt;
+:PromptAssembler.assemble()
+Combine tous les composants;
+note right
+  Builder principal:
+  Ordre d'assemblage:
+  1. Prompt système
+  2. Préférences
+  3. Contexte workspace
+  4. Contexte de rôle
+  5. Contexte RAG
+end note
+
+|#lightgreen|CoreAgent|
+:Validation du prompt final;
+if (Debug mode?) then (yes)
+  :Ajoute les marqueurs de section
+  et les informations de debug;
+else (no)
+  :Format standard;
+endif
+:Retourne le prompt complet;
+stop
+
+@enduml

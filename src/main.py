@@ -292,8 +292,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'Get Help': 'https://github.com/yourusername/JarvisOne',
-        'Report a bug': "https://github.com/yourusername/JarvisOne/issues",
+        'Get Help': 'https://github.com/wilsto/JarvisOne',
+        'Report a bug': "https://github.com/wilsto/JarvisOne/issues",
         'About': "# JarvisOne\nA modular, scalable, conversational AI assistant."
     }
 )
@@ -326,25 +326,74 @@ if __name__ == "__main__":
     
     # Main column for chat (2/3)
     with col_main:
-        chat_tab, library_tab, apps_tab = st.tabs(["💬 Chat", "📚 Library", "🔧 Apps"])
+        chat_tab, history_tab, library_tab = st.tabs(["💬 Chat", "📜 History", "📚 Library"])
         with chat_tab:
             st.markdown('<div id="chat-tab-content">', unsafe_allow_html=True)
             from ui.chat_ui import display_chat
             display_chat()  # Your function that generates chat content
             st.markdown('</div>', unsafe_allow_html=True)
+        with history_tab:
+            from ui.components.conversation_history import render_conversation_history
+            
+            # Get the chat_processor and conversations
+            if "chat_processor" in st.session_state:
+                chat_processor = st.session_state.chat_processor
+                current_space = st.session_state.workspace
+                
+                # Only fetch conversations if we haven't already or if we switched workspaces
+                if ('cached_conversations' not in st.session_state or 
+                    'cached_workspace' not in st.session_state or 
+                    st.session_state.cached_workspace != current_space):
+                    conversations = chat_processor.get_recent_conversations(workspace=current_space)
+                    st.session_state.cached_conversations = conversations
+                    st.session_state.cached_workspace = current_space
+                else:
+                    conversations = st.session_state.cached_conversations
+            else:
+                conversations = []
+            
+            def on_conversation_selected(conversation_id):
+                if conversation_id is None:
+                    # Create new conversation in current workspace
+                    st.session_state.chat_processor.new_conversation(workspace=current_space)
+                    st.session_state.current_conversation_id = None  # Set to None for a new chat
+                    # Clear cached conversations to force refresh
+                    if 'cached_conversations' in st.session_state:
+                        del st.session_state.cached_conversations
+                else:
+                    # Only load if we're actually changing conversations
+                    if st.session_state.get('current_conversation_id') != conversation_id:
+                        st.session_state.chat_processor.load_conversation(conversation_id)
+                        st.session_state.current_conversation_id = conversation_id
+                        # Clear cached conversations to force refresh
+                        if 'cached_conversations' in st.session_state:
+                            del st.session_state.cached_conversations
+                
+                # Rerun only after updating session state
+                st.rerun()
+            
+            render_conversation_history(
+                conversations=conversations,
+                on_conversation_selected=on_conversation_selected,
+                current_conversation_id=st.session_state.get("current_conversation_id")
+            )
         with library_tab:
             from features.ui.library_tab import LibraryTab
             library = LibraryTab(st.session_state.workspace_manager)
             library.render()
-        with apps_tab:
-            display_apps()
 
+    # Count errors and warnings in the background
+    logs = get_logs()
+    error_count = sum(1 for log in logs if log.get('level') == 'ERROR')
+    warning_count = sum(1 for log in logs if log.get('level') == 'WARNING')
+    
     # Side column for logs and interactions (1/3)
     with col_side:
-        tab_interactions, tab_logs, tab_params = st.tabs([
-            "⚡ Interactions", 
-            "📋 Logs",
-            "⚙️ Parameters"
+        tab_interactions, tab_logs, tab_params, apps_tab = st.tabs([
+            "⚡ Interactions",
+            f"{'🚨' if error_count > 0 else '⚠️' if warning_count > 0 else '📋'} Logs",
+            "⚙️ Parameters",
+            "🔧 Apps"
         ])
         
         with tab_interactions:
@@ -356,9 +405,11 @@ if __name__ == "__main__":
         with tab_params:
             from ui.parameters import display_parameters
             display_parameters()
+        with apps_tab:
+            display_apps()
             
     # Count errors in the background
     logs = get_logs()
-    error_count = sum(1 for log in logs if log['level'] in ['ERROR', 'CRITICAL'])
+    error_count = sum(1 for log in logs if log.get('level') == 'ERROR')
     if error_count > 0:
         st.sidebar.error(f"{error_count} error(s) detected. Check logs for more details.")

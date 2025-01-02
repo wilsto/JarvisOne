@@ -1,28 +1,106 @@
 """Sidebar component for conversation history."""
 
 import streamlit as st
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 from typing import Optional, Callable, List, Dict
-from ..styles.sidebar import SIDEBAR_STYLE
 
 logger = logging.getLogger(__name__)
 
 def format_timestamp(dt: datetime) -> str:
-    """Format timestamp in a user-friendly way."""
+    """Format timestamp in a user-friendly way.
+    
+    Returns:
+        - "HH:MM" for today
+        - "Yesterday HH:MM" for yesterday
+        - "Monday HH:MM" (etc.) for this week
+        - "Jan 15 HH:MM" for this month
+        - "Jan 15, 2024" for older dates
+    """
     now = datetime.now(timezone.utc)
+    
     # Ensure dt is timezone-aware
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     
-    diff = now - dt
+    # Convert to start of day for accurate comparison
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    dt_start = dt.replace(hour=0, minute=0, second=0, microsecond=0)
     
-    if diff.days == 0:
-        return dt.strftime("%H:%M")
-    elif diff.days < 7:
-        return dt.strftime("%A")
+    diff_days = (today_start - dt_start).days
+    time_str = dt.strftime("%H:%M")
+    
+    if diff_days == 0:
+        return time_str
+    elif diff_days == 1:
+        return f"{time_str}"
+    elif diff_days < 7:
+        return f"{dt.strftime('%A')} {time_str}"  # Day name
+    elif diff_days < 30:
+        return f"{dt.strftime('%b %d')} {time_str}"  # Month day
     else:
-        return dt.strftime("%d/%m/%y")
+        return dt.strftime("%b %d, %Y")  # Full date
+
+def group_conversations_by_time(conversations: List[Dict]) -> Dict[str, List[Dict]]:
+    """Group conversations by time period."""
+    now = datetime.now(timezone.utc)
+    
+    # Convert now to start of day for accurate day comparisons
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+    
+    groups = {
+        "Today": [],
+        "Yesterday": [],
+        "This Week": [],
+        "This Month": [],
+        "Older": []
+    }
+    
+    for conv in conversations:
+        # Ensure timestamp is UTC
+        dt = conv["last_timestamp"]
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        
+        # Convert to start of day for accurate comparison
+        dt_start = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if dt_start >= today_start:
+            groups["Today"].append(conv)
+        elif dt_start >= yesterday_start:
+            groups["Yesterday"].append(conv)
+        elif dt_start >= week_start:
+            groups["This Week"].append(conv)
+        elif dt_start >= month_start:
+            groups["This Month"].append(conv)
+        else:
+            groups["Older"].append(conv)
+    
+    # Only return non-empty groups
+    return {k: sorted(v, key=lambda x: x["last_timestamp"], reverse=True) 
+            for k, v in groups.items() if v}
+
+# Style CSS pour les cartes et séparateurs
+CARD_STYLE = """
+
+    .time-separator {
+        color: #666;
+        font-size: 0.85em;
+        font-weight: 500;
+        padding: 8px 0;
+        margin: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .stButton button {
+        border: none;
+        background-color: transparent;
+        color: #666;
+        font-size: 0.7em;
+    }
+"""
 
 def render_conversation_history(
     conversations: List[Dict],
@@ -30,63 +108,52 @@ def render_conversation_history(
     current_conversation_id: Optional[str] = None
 ):
     """Render the conversation history in the sidebar."""
-    # Inject custom CSS
-    st.markdown(SIDEBAR_STYLE, unsafe_allow_html=True)
+    # Inject custom CSS with style tags
+    st.markdown(f"<style>{CARD_STYLE}</style>", unsafe_allow_html=True)
     
     # Initialize search state if not exists
     if 'search_query' not in st.session_state:
-        st.session_state.search_query = ''
+        st.session_state.search_query = ""
     
-    # Search bar
-    search_col1, search_col2 = st.columns([1, 7])
-    with search_col1:
-        st.markdown(
-            '<div style="padding-top: 20px;padding-left: 10px">🔎</div>',
-            unsafe_allow_html=True
-        )
-    with search_col2:
-        search_query = st.text_input(
-            "Search conversations",
-            value=st.session_state.search_query,
-            label_visibility="collapsed",
-            placeholder="Search conversations..."
-        )
-
+    # Search box with improved styling
+    search_query = st.text_input(
+        "Search conversations...",
+        value=st.session_state.search_query,
+        key="history_search",
+        label_visibility="collapsed",
+        placeholder="🔍 Search conversations..."
+    )
     
     # Update search state
     st.session_state.search_query = search_query
     
-    # Filter conversations based on search query
-    if search_query:
-        filtered_conversations = []
-        search_term = search_query.lower()
+    # Filter conversations based on search
+    filtered_conversations = []
+    for conv in conversations:
+        title = conv.get("title", "").lower()
+        messages = conv.get("messages", [])
+        content = " ".join([msg.get("content", "") for msg in messages]).lower()
+        if search_query.lower() in title or search_query.lower() in content:
+            filtered_conversations.append(conv)
+    
+    # Group conversations by time period
+    grouped_conversations = group_conversations_by_time(filtered_conversations)
+    
+    # Display conversations by group
+    for group_name, group_conversations in grouped_conversations.items():
+        # Add time separator
+        st.markdown(f'<div class="time-separator">{group_name}</div>', unsafe_allow_html=True)
         
-        for conv in conversations:
-            # Search in title
-            title = conv.get("title") or ""
-            if search_term in title.lower():
-                filtered_conversations.append(conv)
-                continue
-            
-            # Search in messages
-            messages = conv.get("messages", [])
-            for msg in messages:
-                content = msg.get("content") or ""
-                if search_term in content.lower():
-                    filtered_conversations.append(conv)
-                    break
-    else:
-        filtered_conversations = conversations
+        # Sort conversations within group by timestamp (newest first)
+        sorted_conversations = sorted(
+            group_conversations,
+            key=lambda x: x["last_timestamp"],
+            reverse=True
+        )
         
-    # Display filtered conversations
-    if filtered_conversations:
-        for conv in filtered_conversations:
-            render_conversation_item(conv, on_conversation_selected, current_conversation_id)
-    else:
-        if search_query:
-            st.markdown('<div style="padding: 8px 0; color: #666; font-size: 13px;">No matching conversations</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div style="padding: 8px 0; color: #666; font-size: 13px;">No conversations yet</div>', unsafe_allow_html=True)
+        # Display conversations in the group
+        for conversation in sorted_conversations:
+            render_conversation_item(conversation, on_conversation_selected, current_conversation_id)
 
 def render_conversation_item(
     conversation: Dict,
@@ -98,26 +165,52 @@ def render_conversation_item(
     title = conversation["title"] or "New Chat"
     timestamp = format_timestamp(conversation["last_timestamp"])
     
+    # Check if this conversation is being loading
+    is_loading = st.session_state.get('loading_conversation', False) and conversation["id"] == current_conversation_id
+    
+    # Safely get and truncate the last message
+    try:
+        last_message = conversation.get("messages", [])[-1].get("content", "No message")
+        # Truncate long messages
+        if len(last_message) > 100:
+            last_message = last_message[:100] + "..."
+        # Escape HTML characters to prevent formatting issues
+        last_message = last_message.replace("<", "&lt;").replace(">", "&gt;")
+    except (IndexError, KeyError):
+        last_message = "No message"
+    
     # Create container for better layout
     container = st.container()
     with container:
-        col1, col2, col3 = st.columns([1, 6, 1])
-        with col1:
-            st.markdown(
-                f'<div style="text-align: right; padding: 0.75rem 0.5rem;color: #666; font-size: 10px;margin-top: 10px">{timestamp}</div>',
-                unsafe_allow_html=True
-            )        
-        with col2:
-            st.markdown(
-                f'<div style="text-align: left; padding: 0.75rem 0.5rem;margin-top: 6px">{title}</div>',
+        # Add loading spinner if conversation is being loaded
+        if is_loading:
+            st.spinner("Loading conversation...")
+        
+        # Create columns for layout
+        time_col, title_col  = st.columns([0.75, 9])
+        
+        with title_col:
+            st.markdown(f"""
+                <div style='background-color: {"#e8f0fe" if is_active else ""}; opacity: {"0.7" if is_loading else "1"}; padding: 8px; border-radius: 8px;'>
+                    <div style='font-weight: bold; font-size: 1em; color: #2c3e50;'>{title}</div>
+                    <div style='color: #666; font-size: 0.8em; margin-top: 0px;'>{last_message}</div>
+                </div>
+                """, 
                 unsafe_allow_html=True
             )
-            
-        with col3:
-            if st.button(
-                "⤴",
-                key=f"conv_{conversation['id']}",
-                use_container_width=True,
-                type="secondary" if is_active else "primary"
-            ):
-                on_conversation_selected(conversation["id"])
+        
+        with time_col:
+            st.markdown(f"""
+                <div style='text-align: center;'>
+                    <div style='color: #666; font-size: 0.8em;'>{timestamp}
+                """,
+                unsafe_allow_html=True
+            )
+            if not is_loading:
+                st.button(" 🔄", key=f"reload_{conversation['id']}", help="Reload conversation", on_click=lambda: on_conversation_selected(conversation["id"]))
+
+            st.markdown(f"""
+               </div> </div>
+                """,
+                unsafe_allow_html=True
+            )                

@@ -27,16 +27,12 @@ def init_chat_session():
         
         if workspace_manager:
             current_space_config = workspace_manager.get_current_space_config()
-            
-            if current_space_config and hasattr(current_space_config, 'metadata'):
-                scope = current_space_config.metadata.get('scope', '')
+            if current_space_config:
+                scope = current_space_config.scope or ''
                 welcome_message = generate_welcome_message(scope)
             else:
                 # Fallback welcome message if no scope defined
-                welcome_message = (
-                    "👋 Bonjour, je suis JarvisOne, votre assistant IA !\n\n"
-                    "Comment puis-je vous aider aujourd'hui ?"
-                )
+                welcome_message = generate_welcome_message('')
         else:
             # Fallback welcome message if no workspace manager
             welcome_message = (
@@ -48,21 +44,21 @@ def init_chat_session():
 
 def render_chat_header(chat_processor):
     """Render the chat header with actions."""
-    col1, col2, col3, col4 = st.columns([7,1,1,1])
+    col1, col2, col3, col4 = st.columns([7,0.4,0.3,0.3])
     
     with col1:
         if st.session_state.current_conversation_id:
             conversation = chat_processor.repository.get_conversation(st.session_state.current_conversation_id)
             if conversation and conversation.get('title'):
-                st.markdown(f"<div style='display: flex; align-items: center; margin-top: 20px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'> 🗨️ {conversation['title']}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='display: flex; align-items: center; margin-top: 0px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'> 🗨️ {conversation['title']}</span></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='display: flex; align-items: center;  margin-top: 20px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
+                st.markdown("<div style='display: flex; align-items: center; margin-top: 0px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
         else:
-            st.markdown("<div style='display: flex; align-items: center;  margin-top: 20px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='display: flex; align-items: center; margin-top: 00px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
             
     with col2:
         # Tools label
-        st.markdown("<div style='text-align: right; padding-right: 5px; color: #666; font-size: 12px; margin-top: 22px; margin-bottom: 20px;'>Tools</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: right; padding-right: 5px; color: #666; font-size: 12px; margin-top: 10px;'>Tools</div>", unsafe_allow_html=True)
 
     with col3:
         if st.button("🆕", use_container_width=True):
@@ -92,20 +88,36 @@ def display_chat():
     # Render the sidebar
     render_sidebar()
 
-    # Display chat messages
-    for message in chat_processor.get_messages():
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    # Create a container for messages
+    messages_container = st.container()
+    
+    # Display chat messages in the messages container
+    with messages_container:
+        for message in chat_processor.get_messages():
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-    # Accept user input
-    if prompt := st.chat_input("Parlez à JarvisOne"):
-        # Add and display user message
-        chat_processor.add_message("user", prompt)
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    # Create the input container last so it stays at the bottom
+    input_container = st.container()
+    
+    # Accept user input in the bottom container
+    with input_container:
+        if prompt := st.chat_input("Parlez à JarvisOne", key="chat_input"):
+            # Add and display user message
+            chat_processor.add_message("user", prompt)
+            with messages_container:
+                with st.chat_message("user"):
+                    st.markdown(prompt)
 
-        # Get and display bot response
-        with st.chat_message("assistant"):
-            response = chat_processor.process_user_input(prompt)
-            st.markdown(response)
-            chat_processor.add_message("assistant", response)
+            # Get and display bot response with spinner
+            with messages_container:
+                with st.chat_message("assistant"):
+                    with st.spinner("JarvisOne is thinking..."):
+                        response = chat_processor.process_user_input(prompt)
+                        st.markdown(response)
+                        chat_processor.add_message("assistant", response)
+    
+    # Check if we need to rerun the app (e.g., after loading a conversation)
+    if st.session_state.get('should_rerun', False):
+        st.session_state.should_rerun = False  # Reset the flag
+        st.rerun()

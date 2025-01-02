@@ -4,10 +4,21 @@ from .llm_base import LLM
 from .llm_manager import get_llm_model
 from core.workspace_manager import WorkspaceManager
 import logging
-from typing import List
+from typing import List, Dict
 from pathlib import Path
 from rag.processor import MessageProcessor
 from rag.query_handler import RAGQueryHandler
+from .prompts.components import (
+    SystemPromptConfig,
+    WorkspaceContextConfig,
+    RAGContextConfig,
+    PreferencesConfig,
+    RAGDocument,
+    RoleContextConfig,
+    CurrentMessageConfig,
+    MessageHistoryConfig
+)
+from .prompts.assembler import PromptAssembler, PromptAssemblerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +62,7 @@ class CoreAgent(MessageProcessor):
         self.interactions = interactions
         self.llm = llm if llm else ManagedLLM()
         self.workspace_manager = workspace_manager
+        self.message_history: List[Dict[str, str]] = []
         
         # Initialize RAG handler with logging
         if rag_enabled:
@@ -123,36 +135,129 @@ class CoreAgent(MessageProcessor):
             logger.error(f"Error getting RAG context: {str(e)}", exc_info=True)
             return ""
 
-    def _build_prompt(self, user_query: str, workspace_id: str = None, role_id: str = None) -> str:
-        """Build the prompt for the LLM."""
-        prompt_parts = []
+    def _prepare_prompt_config(self, user_query: str, workspace_id: str = None, role_id: str = None) -> PromptAssemblerConfig:
+        """Prepare the configuration for prompt assembly.
         
-        # Add system prompt
-        prompt_parts.append("=== System Instructions ===")
-        if self.system_prompt:
-            prompt_parts.append(self.system_prompt)
+        This method acts as a Director in the Builder pattern, preparing all necessary
+        configurations that will be used by the PromptAssembler to build the final prompt.
+        It does NOT build the prompt itself, but rather collects and organizes all the
+        components that should be included.
+        
+        Args:
+            user_query: The user's query to process
+            workspace_id: Optional ID of the current workspace
+            role_id: Optional ID of the current role
             
-        # Add workspace context if available
-        prompt_parts.append("=== Workspace Context ===")
-        if workspace_id and self.workspace_manager:
-            workspace_context = self.workspace_manager.get_current_context_prompt()
-            if workspace_context:
-                prompt_parts.append(workspace_context)
-
-
-        # Add RAG context if available
-        prompt_parts.append("=== RAG Context ===")
-        if workspace_id and self.rag_handler:
-            rag_context = self._get_rag_context(user_query, workspace_id, role_id)
-            if rag_context:
-                prompt_parts.append(rag_context)
-        
-        # Add user query
-        prompt_parts.append("=== User Query ===")
-        prompt_parts.append(user_query)
-        
-        # Combine all parts with double line breaks
-        return "\n\n".join(prompt_parts)
+        Returns:
+            PromptAssemblerConfig: Configuration object containing all components
+            needed to build the final prompt
+            
+        Note:
+            This method follows the Single Responsibility Principle by focusing only
+            on configuration preparation, leaving the actual prompt assembly to the
+            PromptAssembler class.
+        """
+        try:
+            debug_mode = logger.isEnabledFor(logging.DEBUG)
+            
+            # Initialize configs
+            system_config = SystemPromptConfig(
+                context_prompt=self.system_prompt,
+                workspace_scope=workspace_id or "",
+                debug=debug_mode
+            )
+            
+            preferences_config = PreferencesConfig(
+                debug=debug_mode
+            )
+            
+            # Build workspace config if available
+            workspace_config = None
+            if workspace_id and self.workspace_manager:
+                space_config = self.workspace_manager.get_current_space_config()
+                if space_config:
+                    workspace_config = WorkspaceContextConfig(
+                        workspace_id=workspace_id,
+                        workspace_prompt=space_config.workspace_prompt or "",
+                        scope=space_config.scope or "",
+                        debug=debug_mode
+                    )
+                    
+                    # Build role config if role_id is provided and roles exist
+                    role_config = None
+                    roles = space_config.roles or []
+                    if role_id and roles:
+                        # Find role in space config
+                        role = next((r for r in roles if r['name'] == role_id), None)
+                        if role:
+                            logger.debug(f"Found role configuration for {role_id}")
+                            role_config = RoleContextConfig(
+                                role_id=role_id,
+                                role_name=role['role_name'] or "",
+                                role_description=role['role_description'] or "",
+                                prompt_context=role['prompt_context'] or "",
+                                debug=debug_mode
+                            )
+                        else:
+                            logger.warning(f"Role {role_id} not found in workspace {workspace_id}")
+            
+            # Build message history config
+            message_history_config = None
+            if self.message_history:
+                message_history_config = MessageHistoryConfig(
+                    messages=self.message_history.copy(),
+                    debug=debug_mode
+                )
+            
+            # Build current message config
+            current_message_config = CurrentMessageConfig(
+                content=user_query,
+                role="user",
+                debug=debug_mode
+            )
+            
+            # Build RAG config if available
+            rag_config = None
+            if workspace_id and self.rag_handler:
+                rag_context = self._get_rag_context(user_query, workspace_id, role_id)
+                if rag_context:
+                    rag_config = RAGContextConfig(
+                        query=user_query,
+                        documents=[RAGDocument(
+                            content=rag_context,
+                            metadata={'file_path': 'RAG System'}
+                        )],
+                        debug=debug_mode
+                    )
+            
+            # Assemble final config
+            return PromptAssemblerConfig(
+                system_config=system_config,
+                current_message_config=current_message_config,
+                workspace_config=workspace_config,
+                role_config=role_config,
+                message_history_config=message_history_config,
+                rag_config=rag_config,
+                preferences_config=preferences_config,
+                debug=debug_mode
+            )
+            
+        except Exception as e:
+            logger.error(f"Error preparing prompt config: {str(e)}", exc_info=True)
+            # Return basic config as fallback
+            return PromptAssemblerConfig(
+                system_config=SystemPromptConfig(
+                    context_prompt=self.system_prompt,
+                    workspace_scope=workspace_id or "",
+                    debug=debug_mode
+                ),
+                current_message_config=CurrentMessageConfig(
+                    content=user_query,
+                    role="user",
+                    debug=debug_mode
+                ),
+                debug=debug_mode
+            )
 
     def _handle_interaction(self, query: str, results: any) -> str:
         """
@@ -178,7 +283,6 @@ class CoreAgent(MessageProcessor):
                 context.update({
                     "workspace": {
                         "name": workspace_config.name,
-                        "context": workspace_config.metadata.get("context"),
                         "tags": workspace_config.tags
                     }
                 })
@@ -202,49 +306,68 @@ class CoreAgent(MessageProcessor):
         Returns:
             Un dictionnaire contenant la réponse de l'agent.
         """
-        logger.info(f"Running agent with workspace_id={workspace_id}, role_id={role_id}")
-        
-        # Build prompt with all context
-        prompt = self._build_prompt(user_query, workspace_id, role_id)
-        logger.debug(f"##DEBUG## Using final prompt: {prompt}...")
-        
-        # On demande au LLM de générer une réponse
-        llm_response = self.llm.generate_response(prompt)
-        
-        # Si pas d'outils, on utilise directement la réponse du LLM
-        content = llm_response
-        
-        # Exécution des outils (s'il y en a)
-        if self.tools:
-            for tool in self.tools:
-                try:
-                    content = tool(llm_response)  # Use LLM response
-                except Exception as e:
-                    logger.error(f"Error while executing tool {tool.__name__} : {e}")
-                    content = []
+        try:
+            # Check for empty query
+            if not user_query or not user_query.strip():
+                return {"content": "Please provide a valid query."}
+                
+            logger.info(f"Running agent with workspace_id={workspace_id}, role_id={role_id}")
+            
+            # Prepare prompt configuration and build final prompt
+            config = self._prepare_prompt_config(user_query, workspace_id, role_id)
+            prompt = PromptAssembler.assemble(config)
+            
+            logger.debug(f"##DEBUG## Using final prompt: {prompt}...")
+            
+            # On demande au LLM de générer une réponse
+            llm_response = self.llm.generate_response(prompt)
+            
+            # Update message history
+            self.message_history.append({"role": "user", "content": user_query})
+            self.message_history.append({"role": "assistant", "content": llm_response})
+            
+            # Limit history size
+            if len(self.message_history) > 50:  # Keep last 25 exchanges
+                self.message_history = self.message_history[-50:]
+            
+            # Si pas d'outils, on utilise directement la réponse du LLM
+            content = llm_response
+            
+            # Exécution des outils (s'il y en a)
+            if self.tools:
+                for tool in self.tools:
+                    try:
+                        content = tool(llm_response)  # Use LLM response
+                    except Exception as e:
+                        logger.error(f"Error while executing tool {tool.__name__} : {e}")
+                        content = []
 
-        # Gérer l'interaction UI si définie et si RAG n'est pas utilisé
-        interaction_id = None
-        if not (workspace_id and self.rag_handler):
-            interaction_id = self._handle_interaction(llm_response, content)
+            # Gérer l'interaction UI si définie et si RAG n'est pas utilisé
+            interaction_id = None
+            if not (workspace_id and self.rag_handler):
+                interaction_id = self._handle_interaction(llm_response, content)
 
-        # Si on a un formateur de sortie, on l'utilise
-        if self.output_formatter:
-            if content is not None:
-                content = self.output_formatter(content, llm_response, interaction_id)
+            # Si on a un formateur de sortie, on l'utilise
+            if self.output_formatter:
+                if content is not None:
+                    content = self.output_formatter(content, llm_response, interaction_id)
+                else:
+                    content = {"error": "No tool output available"}
+            # Sinon, on retourne un dict avec la réponse du LLM
             else:
-                content = {"error": "No tool output available"}
-        # Sinon, on retourne un dict avec la réponse du LLM
-        else:
-            content = {
-                "content": content,
-                "metadata": {
-                    "raw_response": llm_response,
-                    "interaction_id": interaction_id
+                content = {
+                    "content": content,
+                    "metadata": {
+                        "raw_response": llm_response,
+                        "interaction_id": interaction_id
+                    }
                 }
-            }
 
-        return content
+            return content
+            
+        except Exception as e:
+            logger.error(f"Error in agent execution: {str(e)}", exc_info=True)
+            return {"error": str(e)}
 
     async def process_message(
         self,

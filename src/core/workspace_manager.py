@@ -1,4 +1,17 @@
-"""Workspace Manager for JarvisOne."""
+"""Workspace Manager for JarvisOne.
+
+This module manages different workspaces and their configurations. Each workspace has:
+- A unique identifier (SpaceType)
+- A configuration (SpaceConfig) containing:
+  - name: The display name of the workspace
+  - paths: List of paths to search in this workspace
+  - metadata: Additional workspace metadata
+  - search_params: Configuration for search operations
+  - tags: Workspace tags for categorization
+  - workspace_prompt: Custom prompt for this workspace
+  - scope: Defines the boundaries and focus areas of the workspace
+  - roles: List of available roles in this workspace
+"""
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
@@ -29,6 +42,7 @@ class SpaceConfig:
     search_params: Dict
     tags: List[str]
     workspace_prompt: Optional[str] = None
+    scope: Optional[str] = None
     roles: List[Dict] = field(default_factory=list)
 
 class WorkspaceManager:
@@ -49,13 +63,12 @@ class WorkspaceManager:
                 # Load general config file for metadata and scope
                 general_file = spaces_dir / "general_config.yaml"
                 metadata = {}
+                scope = None
                 if general_file.exists():
                     with open(general_file, 'r', encoding='utf-8') as f:
                         config_data = yaml.safe_load(f)
                         metadata = config_data.get('metadata', {})
-                        # Load scope into metadata if present
-                        if 'scope' in config_data:
-                            metadata['scope'] = config_data['scope']
+                        scope = config_data.get('scope', None)
                 
                 self.spaces[space_type] = SpaceConfig(
                     name="General",
@@ -63,7 +76,8 @@ class WorkspaceManager:
                     metadata=metadata,
                     search_params={},
                     tags=[],
-                    workspace_prompt=config_data.get('workspace_prompt', None) if 'config_data' in locals() else None
+                    workspace_prompt=config_data.get('workspace_prompt', None) if 'config_data' in locals() else None,
+                    scope=scope
                 )
                 continue
                 
@@ -72,9 +86,6 @@ class WorkspaceManager:
                 with open(config_file, 'r', encoding='utf-8') as f:
                     config_data = yaml.safe_load(f)
                     metadata = config_data.get('metadata', {})
-                    # Load scope into metadata if present
-                    if 'scope' in config_data:
-                        metadata['scope'] = config_data['scope']
                         
                     # Log raw paths before expansion
                     logger.debug(f"Raw paths for {space_type}: {config_data['paths']}")
@@ -93,6 +104,7 @@ class WorkspaceManager:
                         search_params=config_data.get('search_params', {}),
                         tags=config_data.get('tags', []),
                         workspace_prompt=config_data.get('workspace_prompt', None),
+                        scope=config_data.get('scope', None),
                         roles=config_data.get('roles', [])
                     )
 
@@ -119,7 +131,7 @@ class WorkspaceManager:
             
         # Get base context prompt and scope
         context_prompt = current_space_config.workspace_prompt or ""
-        scope = current_space_config.metadata.get('scope', "")
+        scope = current_space_config.scope
         
         # Add role-specific context if a role is selected
         role = next((r for r in current_space_config.roles if r['name'] == self.current_role), None)

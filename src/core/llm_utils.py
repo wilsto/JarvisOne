@@ -100,12 +100,17 @@ def retry_on_error(max_retries: int = 3, delay: float = 1.0):
 DEFAULT_PARAMS = {
     'provider': config.get('llm', {}).get('default_provider', 'Ollama (Local)'),
     'model': config.get('llm', {}).get('default_model', 'mistral:latest'),
-    'temperature': 0.7,
     'max_tokens': 2000,
     'top_p': 0.95,
     'frequency_penalty': 0.0,
     'presence_penalty': 0.0,
 }
+
+# Get dynamic temperature based on creativity level
+def get_temperature() -> float:
+    """Get the current temperature setting based on creativity level."""
+    from core.prompts.generic_prompts import get_llm_temperature
+    return get_llm_temperature()
 
 # API Keys from environment
 API_KEYS = {
