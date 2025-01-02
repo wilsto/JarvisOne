@@ -24,69 +24,103 @@ def format_timestamp(dt: datetime) -> str:
     else:
         return dt.strftime("%d/%m/%y")
 
+# Style CSS pour les cartes
+CARD_STYLE = """
+    .conversation-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        transition: background-color 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        gap: 4px;
+    }
+    .conversation-card:hover {
+        background-color: #f5f5f5;
+    }
+    .conversation-card-title {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #2c3e50;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .conversation-card-time {
+        font-size: 0.8em;
+        color: #777;
+        white-space: nowrap;
+        margin-left: 8px;
+    }
+    .conversation-card-details {
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+    .conversation-card-last-message {
+        font-size: 0.9em;
+        color: #666;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+    }
+    /* Style for the button */
+    .stButton button {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        margin: 0;
+        padding: 0;
+    }
+"""
 def render_conversation_history(
     conversations: List[Dict],
     on_conversation_selected: Callable[[str], None],
     current_conversation_id: Optional[str] = None
 ):
     """Render the conversation history in the sidebar."""
-    # Inject custom CSS
-    st.markdown(SIDEBAR_STYLE, unsafe_allow_html=True)
+    # Inject custom CSS with style tags
+    st.markdown(f"<style>{CARD_STYLE}</style>", unsafe_allow_html=True)
     
     # Initialize search state if not exists
     if 'search_query' not in st.session_state:
-        st.session_state.search_query = ''
+        st.session_state.search_query = ""
     
-    # Search bar
-    search_col1, search_col2 = st.columns([1, 7])
-    with search_col1:
-        st.markdown(
-            '<div style="padding-top: 20px;padding-left: 10px">🔎</div>',
-            unsafe_allow_html=True
-        )
-    with search_col2:
-        search_query = st.text_input(
-            "Search conversations",
-            value=st.session_state.search_query,
-            label_visibility="collapsed",
-            placeholder="Search conversations..."
-        )
-
+    # Search box
+    search_query = st.text_input(
+        "Search conversations...",
+        value=st.session_state.search_query,
+        key="history_search",
+        label_visibility="collapsed",
+        placeholder="Search conversations..."
+    )
     
     # Update search state
     st.session_state.search_query = search_query
     
-    # Filter conversations based on search query
-    if search_query:
-        filtered_conversations = []
-        search_term = search_query.lower()
-        
-        for conv in conversations:
-            # Search in title
-            title = conv.get("title") or ""
-            if search_term in title.lower():
-                filtered_conversations.append(conv)
-                continue
-            
-            # Search in messages
-            messages = conv.get("messages", [])
-            for msg in messages:
-                content = msg.get("content") or ""
-                if search_term in content.lower():
-                    filtered_conversations.append(conv)
-                    break
-    else:
-        filtered_conversations = conversations
-        
-    # Display filtered conversations
-    if filtered_conversations:
-        for conv in filtered_conversations:
-            render_conversation_item(conv, on_conversation_selected, current_conversation_id)
-    else:
-        if search_query:
-            st.markdown('<div style="padding: 8px 0; color: #666; font-size: 13px;">No matching conversations</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div style="padding: 8px 0; color: #666; font-size: 13px;">No conversations yet</div>', unsafe_allow_html=True)
+    # Filter conversations based on search
+    filtered_conversations = []
+    for conv in conversations:
+        title = conv.get("title", "").lower()
+        messages = conv.get("messages", [])
+        content = " ".join([msg.get("content", "") for msg in messages]).lower()
+        if search_query.lower() in title or search_query.lower() in content:
+            filtered_conversations.append(conv)
+    
+    # Display conversations
+    for conversation in filtered_conversations:
+        render_conversation_item(conversation, on_conversation_selected, current_conversation_id)
 
 def render_conversation_item(
     conversation: Dict,
@@ -98,26 +132,35 @@ def render_conversation_item(
     title = conversation["title"] or "New Chat"
     timestamp = format_timestamp(conversation["last_timestamp"])
     
+    # Safely get and truncate the last message
+    try:
+        last_message = conversation.get("messages", [])[-1].get("content", "No message")
+        # Truncate long messages
+        if len(last_message) > 100:
+            last_message = last_message[:100] + "..."
+        # Escape HTML characters to prevent formatting issues
+        last_message = last_message.replace("<", "&lt;").replace(">", "&gt;")
+    except (IndexError, KeyError):
+        last_message = "No message"
+    
     # Create container for better layout
     container = st.container()
     with container:
-        col1, col2, col3 = st.columns([1, 6, 1])
-        with col1:
-            st.markdown(
-                f'<div style="text-align: right; padding: 0.75rem 0.5rem;color: #666; font-size: 10px;margin-top: 10px">{timestamp}</div>',
-                unsafe_allow_html=True
-            )        
-        with col2:
-            st.markdown(
-                f'<div style="text-align: left; padding: 0.75rem 0.5rem;margin-top: 6px">{title}</div>',
-                unsafe_allow_html=True
-            )
-            
-        with col3:
-            if st.button(
-                "⤴",
-                key=f"conv_{conversation['id']}",
-                use_container_width=True,
-                type="secondary" if is_active else "primary"
-            ):
-                on_conversation_selected(conversation["id"])
+        # Render the conversation card
+        st.markdown(f"""
+            <div class="conversation-card" style='{"background-color: #e8f0fe;" if is_active else ""}'>
+                <div class="conversation-card-details">
+                    <span class="conversation-card-title">{title}</span>
+                    <span class="conversation-card-time">{timestamp}</span>
+                </div>
+                <div class="conversation-card-last-message" title="{last_message}">
+                    {last_message}
+                </div>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        # Add an invisible button that covers the entire container
+        if st.button("", key=f"conv_{conversation['id']}", help=title):
+            on_conversation_selected(conversation["id"])

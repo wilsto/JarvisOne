@@ -117,22 +117,3 @@ def render_sidebar():
                 # Rerun to update UI with new role context
                 st.rerun()
         
-        # Render conversation history if chat processor is available
-        if "chat_processor" in st.session_state:
-            chat_processor = st.session_state.chat_processor
-            current_space = st.session_state.workspace
-            conversations = chat_processor.get_recent_conversations(workspace=current_space)
-            
-            def on_conversation_selected(conversation_id):
-                if conversation_id is None:
-                    # Create new conversation in current workspace
-                    chat_processor.new_conversation(workspace=current_space)
-                else:
-                    chat_processor.load_conversation(conversation_id)
-                st.rerun()
-            
-            render_conversation_history(
-                conversations=conversations,
-                on_conversation_selected=on_conversation_selected,
-                current_conversation_id=st.session_state.get("current_conversation_id")
-            )
