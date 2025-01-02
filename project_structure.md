@@ -267,7 +267,7 @@ This document describes the purpose of each directory and file within the Jarvis
 * **Streamlit**: Version 1.31+ for UI.
 * **LLMs**: Gemini 2.0, ChatGPT-4, Ollama, Anthropic.
 * **Testing**: Pytest + Streamlit Testing.
-* **Config**: PyYAML.
+* **Config**: ruamel.yaml.
 * **RAG Stack**:
   * LangChain for text processing
   * SentenceTransformers for embeddings
