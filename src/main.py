@@ -326,7 +326,7 @@ if __name__ == "__main__":
     
     # Main column for chat (2/3)
     with col_main:
-        chat_tab, history_tab, library_tab, apps_tab = st.tabs(["💬 Chat", "📜 History", "📚 Library", "🔧 Apps"])
+        chat_tab, history_tab, library_tab = st.tabs(["💬 Chat", "📜 History", "📚 Library"])
         with chat_tab:
             st.markdown('<div id="chat-tab-content">', unsafe_allow_html=True)
             from ui.chat_ui import display_chat
@@ -381,15 +381,14 @@ if __name__ == "__main__":
             from features.ui.library_tab import LibraryTab
             library = LibraryTab(st.session_state.workspace_manager)
             library.render()
-        with apps_tab:
-            display_apps()
 
     # Side column for logs and interactions (1/3)
     with col_side:
-        tab_interactions, tab_logs, tab_params = st.tabs([
+        tab_interactions, tab_logs, tab_params, apps_tab = st.tabs([
             "⚡ Interactions", 
             "📋 Logs",
-            "⚙️ Parameters"
+            "⚙️ Parameters", 
+            "🔧 Apps"
         ])
         
         with tab_interactions:
@@ -401,6 +400,8 @@ if __name__ == "__main__":
         with tab_params:
             from ui.parameters import display_parameters
             display_parameters()
+        with apps_tab:
+            display_apps()
             
     # Count errors in the background
     logs = get_logs()

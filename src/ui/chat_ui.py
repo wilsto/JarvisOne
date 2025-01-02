@@ -48,21 +48,21 @@ def init_chat_session():
 
 def render_chat_header(chat_processor):
     """Render the chat header with actions."""
-    col1, col2, col3, col4 = st.columns([7,1,1,1])
+    col1, col2, col3, col4 = st.columns([7,0.4,0.3,0.3])
     
     with col1:
         if st.session_state.current_conversation_id:
             conversation = chat_processor.repository.get_conversation(st.session_state.current_conversation_id)
             if conversation and conversation.get('title'):
-                st.markdown(f"<div style='display: flex; align-items: center; margin-top: 20px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'> 🗨️ {conversation['title']}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='display: flex; align-items: center; margin-top: 0px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'> 🗨️ {conversation['title']}</span></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='display: flex; align-items: center;  margin-top: 20px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
+                st.markdown("<div style='display: flex; align-items: center; margin-top: 0px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
         else:
-            st.markdown("<div style='display: flex; align-items: center;  margin-top: 20px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='display: flex; align-items: center; margin-top: 00px; margin-left: 10px;'><span style='margin-right: 8px; font-size: 1.2em; font-weight: bold;'>🗨️ New Chat</span></div>", unsafe_allow_html=True)
             
     with col2:
         # Tools label
-        st.markdown("<div style='text-align: right; padding-right: 5px; color: #666; font-size: 12px; margin-top: 22px; margin-bottom: 20px;'>Tools</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: right; padding-right: 5px; color: #666; font-size: 12px; margin-top: 10px;'>Tools</div>", unsafe_allow_html=True)
 
     with col3:
         if st.button("🆕", use_container_width=True):
