@@ -6,7 +6,7 @@ from typing import Dict, Optional, Any
 from dotenv import load_dotenv
 import logging
 from pathlib import Path
-import yaml
+from ruamel.yaml import YAML
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,11 @@ load_dotenv()
 # Get the config directory relative to this file
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
+
+# Initialize YAML handler with comment preservation
+yaml = YAML()
+yaml.preserve_quotes = True
+yaml.indent(mapping=2, sequence=4, offset=2)
 
 class ConfigManager:
     """Configuration manager for application settings."""
@@ -48,7 +53,10 @@ class ConfigManager:
         try:
             if os.path.exists(cls.CONFIG_FILE):
                 with open(cls.CONFIG_FILE, "r", encoding="utf-8") as f:
-                    config = yaml.safe_load(f)
+                    config = yaml.load(f)
+                    # Convert to dict if needed
+                    if hasattr(config, 'data'):
+                        config = config.data
                     # Don't cache sensitive data
                     if isinstance(config, dict):
                         # Remove API keys if they were accidentally saved
@@ -72,25 +80,29 @@ class ConfigManager:
                 if provider in clean_config:
                     del clean_config[provider]
             
-            # Preserve existing structure if possible
-            existing_config = {}
+            # Load existing config with comments
             if os.path.exists(cls.CONFIG_FILE):
                 with open(cls.CONFIG_FILE, "r", encoding="utf-8") as f:
-                    existing_config = yaml.safe_load(f) or {}
+                    existing = yaml.load(f)
+                    
+                # Update existing config while preserving structure
+                def deep_update(d, u):
+                    for k, v in u.items():
+                        if isinstance(v, dict) and k in d and isinstance(d[k], dict):
+                            deep_update(d[k], v)
+                        else:
+                            d[k] = v
+                
+                if hasattr(existing, 'data'):
+                    deep_update(existing.data, clean_config)
+                else:
+                    existing = clean_config
+            else:
+                existing = clean_config
             
-            # Update only changed sections
-            def deep_update(d, u):
-                for k, v in u.items():
-                    if isinstance(v, dict) and k in d and isinstance(d[k], dict):
-                        deep_update(d[k], v)
-                    else:
-                        d[k] = v
-            
-            deep_update(existing_config, clean_config)
-            
-            # Save with structure preservation
+            # Save with preserved formatting
             with open(cls.CONFIG_FILE, "w", encoding="utf-8") as f:
-                yaml.dump(existing_config, f, indent=2, sort_keys=False, default_flow_style=False)
+                yaml.dump(existing, f)
             
             logger.info("Configuration saved successfully")
             cls._config_cache = clean_config  # Update cache with clean config
