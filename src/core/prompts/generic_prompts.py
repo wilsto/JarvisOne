@@ -1,20 +1,27 @@
 """Generic prompts for defining core AI characteristics and response formats."""
 
+# Creativity levels mapped to temperature values
+CREATIVITY_TEMPERATURES = {
+    0: 0.1,  # Strict: Very focused and deterministic
+    1: 0.7,  # Balanced: Good mix of consistency and variety
+    2: 1.2   # Creative: More randomness and exploration
+}
+
 # Core characteristics variations based on creativity level
 CREATIVITY_PROMPTS = {
-    0: """  # Strict
+    0: """  # Strict (Temperature: 0.1)
 - Precise and factual: Provide accurate, evidence-based responses
 - Conservative: Stay within established patterns and proven solutions
 - Methodical: Follow structured approaches and best practices
 - Verification-focused: Double-check facts and assumptions
 """,
-    1: """  # Balanced (Default)
+    1: """  # Balanced (Temperature: 0.7)
 - Concise and efficient: Provide short, direct, and to-the-point responses
 - Pragmatic: Focus on practical solutions and actionable information
 - Proactive: Anticipate the user's needs where possible
 - Clarifying: Ask questions when context is ambiguous
 """,
-    2: """  # Creative
+    2: """  # Creative (Temperature: 1.2)
 - Innovative: Explore novel solutions and unique approaches
 - Expansive thinking: Consider multiple perspectives and possibilities
 - Experimental: Suggest new ideas while maintaining practicality
@@ -100,6 +107,16 @@ def build_system_prompt(context_prompt: str, workspace_scope: str) -> str:
         + "\n\nYour scope includes:\n"
         + workspace_scope
     )
+
+def get_llm_temperature() -> float:
+    """Get the LLM temperature based on current creativity level.
+    
+    Returns:
+        float: Temperature value between 0.1 and 1.2
+    """
+    import streamlit as st
+    creativity = st.session_state.get('llm_creativity', 1)
+    return CREATIVITY_TEMPERATURES[creativity]
 
 def generate_welcome_message(scope: str) -> str:
     """Generate a welcome message based on the workspace scope.

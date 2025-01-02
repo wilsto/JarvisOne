@@ -83,7 +83,7 @@ class OpenAILLM(LLM):
             stream = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=DEFAULT_PARAMS['temperature'],
+                temperature=llm_utils.get_temperature(),
                 max_tokens=DEFAULT_PARAMS['max_tokens'],
                 presence_penalty=DEFAULT_PARAMS['presence_penalty'],
                 frequency_penalty=DEFAULT_PARAMS['frequency_penalty'],
@@ -136,7 +136,7 @@ class AnthropicLLM(LLM):
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=DEFAULT_PARAMS['max_tokens'],
-                temperature=DEFAULT_PARAMS['temperature'],
+                temperature=llm_utils.get_temperature(),
                 messages=[{"role": "user", "content": full_prompt}]
             )
             
@@ -182,7 +182,7 @@ class GeminiLLM(LLM):
             response = self.client.generate_content(
                 full_prompt,
                 generation_config={
-                    "temperature": DEFAULT_PARAMS['temperature'],
+                    "temperature": llm_utils.get_temperature(),
                     "max_output_tokens": DEFAULT_PARAMS['max_tokens'],
                 }
             )
@@ -220,7 +220,7 @@ class OllamaLLM(LLM):
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": DEFAULT_PARAMS['temperature'],
+                    "temperature": llm_utils.get_temperature(),
                     "num_predict": DEFAULT_PARAMS['max_tokens'],
                 }
             }
