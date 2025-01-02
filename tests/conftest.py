@@ -6,6 +6,7 @@ import pytest
 import tempfile
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from pathlib import Path
 
 # Add project root and src directories to Python path
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -44,3 +45,27 @@ def session(engine):
     yield session
     
     session.close()  # Ensure session is closed
+
+@pytest.fixture(scope="function")
+def temp_db_path():
+    """Create a temporary database path for testing.
+    
+    This fixture creates a temporary SQLite database file and ensures proper cleanup.
+    Used by document tracking and other database-dependent tests.
+    """
+    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+        db_path = f.name
+    yield db_path
+    # Clean up
+    try:
+        Path(db_path).unlink(missing_ok=True)
+    except PermissionError:
+        # Ensure all connections are closed
+        import gc
+        gc.collect()  # Force garbage collection
+        import time
+        time.sleep(0.1)  # Wait a bit
+        try:
+            Path(db_path).unlink(missing_ok=True)
+        except PermissionError:
+            pass  # Let the OS clean it up later

@@ -85,11 +85,23 @@ class DocumentEventHandler(FileSystemEventHandler):
     def on_deleted(self, event: FileDeletedEvent):
         """Handle file deletion event."""
         if not event.is_directory and self._should_process(Path(event.src_path)):
-            logger.info(f"File deleted: {event.src_path}")
+            path = Path(event.src_path)
+            logger.info(f"File deleted: {path}")
+            
+            # Get last known hash from document status
+            doc_status = self.doc_tracker.get_document_status(
+                workspace_id=self.workspace_id,
+                file_path=str(path)
+            )
+            
+            # Use last known hash or generate a deletion hash
+            hash_value = doc_status.get('hash') if doc_status else f"deleted_{time.time()}"
+            
             self.doc_tracker.update_document(
                 workspace_id=self.workspace_id,
-                file_path=event.src_path,
-                status='deleted'
+                file_path=str(path),
+                status='deleted',
+                hash_value=hash_value
             )
 
 class FileSystemWatcher:
