@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from rag.query_handler import RAGQueryHandler
-from tests.utils import RAGTestUtils
+from tests.helpers.rag_test_utils import RAGTestUtils
 
 @pytest.fixture
 def mock_vector_db():

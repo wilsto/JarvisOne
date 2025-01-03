@@ -1,36 +1,38 @@
-"""Integration tests for message flow through the system."""
+"""Integration tests for message flow."""
 
 import pytest
-from unittest.mock import MagicMock, patch
-import streamlit as st
-from core.core_agent import CoreAgent
-from features.chat_processor import ChatProcessor
-from core.prompts.assembler import PromptAssembler
-from core.config_manager import ConfigManager
-from core.prompts.components import (
-    SystemPromptConfig,
-    CurrentMessageConfig,
+import logging
+from unittest.mock import patch, Mock
+from pathlib import Path
+
+from src.features.workspace_manager import (
+    WorkspaceManager,
+    WorkspaceConfig,
     MessageHistoryConfig,
     WorkspaceContextConfig
 )
-from tests.utils import SpaceType, MockDatabase, MockSessionState
+from src.features.chat_processor import ChatProcessor
+from src.features.config_manager import ConfigManager
+from tests.types.workspace import SpaceType
+from tests.mocks.database import DatabaseMock
+from tests.mocks.session_state import SessionStateMock
 
 @pytest.fixture
 def mock_session_state():
     """Mock Streamlit session state."""
-    state = MockSessionState()
+    state = SessionStateMock()
     with patch("streamlit.session_state", state):
         yield state
 
 @pytest.fixture
 def mock_db():
     """Mock database."""
-    return MockDatabase()
+    return DatabaseMock()
 
 @pytest.fixture
 def mock_config_manager():
     """Mock ConfigManager."""
-    with patch("core.config_manager.ConfigManager") as mock:
+    with patch("features.config_manager.ConfigManager") as mock:
         mock.get_all_configs.return_value = {
             "rag": {"enabled": False},
             "llm": {"provider": "test_provider", "model": "test_model"}
@@ -44,7 +46,7 @@ def mock_config_manager():
 @pytest.fixture
 def mock_llm():
     """Mock LLM responses."""
-    mock = MagicMock()
+    mock = Mock()
     mock.generate_response.return_value = "Mocked response"
     return mock
 
@@ -52,7 +54,7 @@ def mock_llm():
 def chat_processor(mock_session_state, mock_config_manager, mock_db):
     """Initialize ChatProcessor with mocked components."""
     with patch("features.chat_processor.AgentOrchestrator") as mock_orch:
-        with patch("core.database.repository.ConversationRepository") as mock_repo:
+        with patch("features.database.repository.ConversationRepository") as mock_repo:
             mock_repo.return_value.create_conversation.return_value = mock_db.create_conversation(
                 title="Test Conversation",
                 workspace=SpaceType.DEV
@@ -70,7 +72,7 @@ class TestMessageFlow:
         chat_processor.orchestrator.process_query = agent.run
         
         # Set workspace
-        mock_session_state.workspace = MagicMock()
+        mock_session_state.workspace = Mock()
         mock_session_state.workspace.name = "test_workspace"
         mock_session_state.workspace.workspace_type = SpaceType.DEV
         
@@ -90,7 +92,7 @@ class TestMessageFlow:
     def test_workspace_context_integration(self, chat_processor, mock_llm, mock_session_state):
         """Test message flow with workspace context."""
         # Setup workspace
-        mock_session_state.workspace = MagicMock()
+        mock_session_state.workspace = Mock()
         mock_session_state.workspace.name = "test_workspace"
         mock_session_state.workspace.workspace_type = SpaceType.DEV
         mock_session_state.workspace.workspace_prompt = "Test workspace prompt"
@@ -108,7 +110,7 @@ class TestMessageFlow:
     def test_error_handling_flow(self, chat_processor, mock_llm, mock_session_state):
         """Test error handling throughout the message flow."""
         # Setup workspace
-        mock_session_state.workspace = MagicMock()
+        mock_session_state.workspace = Mock()
         mock_session_state.workspace.name = "test_workspace"
         mock_session_state.workspace.workspace_type = SpaceType.DEV
         mock_session_state.current_role = None  # Ensure no role is set
@@ -132,7 +134,7 @@ class TestMessageFlow:
     def test_message_history_limit(self, chat_processor, mock_llm, mock_session_state):
         """Test message history limit enforcement."""
         # Setup workspace
-        mock_session_state.workspace = MagicMock()
+        mock_session_state.workspace = Mock()
         mock_session_state.workspace.name = "test_workspace"
         mock_session_state.workspace.workspace_type = SpaceType.DEV
         
@@ -153,7 +155,7 @@ class TestMessageFlow:
     def test_prompt_assembly_integration(self, chat_processor, mock_llm, mock_session_state):
         """Test integration of all prompt components."""
         # Setup workspace
-        mock_session_state.workspace = MagicMock()
+        mock_session_state.workspace = Mock()
         mock_session_state.workspace.name = "test_workspace"
         mock_session_state.workspace.workspace_type = SpaceType.DEV
         mock_session_state.workspace.workspace_prompt = "Test workspace prompt"

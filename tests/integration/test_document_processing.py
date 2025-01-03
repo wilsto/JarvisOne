@@ -1,16 +1,19 @@
-"""Integration tests for document processing chain."""
+"""Integration tests for document processing."""
 
 import pytest
-from pathlib import Path
+import logging
 import tempfile
-from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch, Mock
 import time
-from unittest.mock import patch
 
+from src.rag.document_processor import DocumentProcessor
+from src.rag.vector_db import VectorDB
 from src.rag.document_watcher.document_tracker import DocumentTracker
 from src.rag.document_watcher.watcher import DocumentEventHandler
 from src.rag.document_watcher.processor import DocumentChangeProcessor
-from src.rag.document_processor import DocumentProcessor
+from tests.mocks.session_state import SessionStateMock
+from tests.helpers.rag_test_utils import RAGTestUtils
 
 @pytest.fixture
 def temp_test_file():

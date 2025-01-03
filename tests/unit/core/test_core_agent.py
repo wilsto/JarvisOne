@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 from core.workspace_manager import SpaceType, SpaceConfig
 from pathlib import Path
 from dataclasses import dataclass
-from tests.utils import mock_session_state  # Import the common fixture
+from tests.mocks.session_state import SessionStateMock  # Import from new location
 
 @dataclass
 class MockRole:

@@ -1,20 +1,15 @@
+"""Test LLM manager functionality."""
+
 import pytest
-import streamlit as st
+from unittest.mock import patch, MagicMock
 from src.core.llm_manager import (
     init_session_state, update_llm_preferences, get_llm_model,
     OpenAILLM, AnthropicLLM, GeminiLLM, OllamaLLM,
     DEFAULT_PARAMS
 )
 from src.core.llm_base import LLM
-from unittest.mock import patch, MagicMock
-from tests.utils import mock_session_state, MockSessionState
-
-@pytest.fixture
-def mock_workspace_manager():
-    """Mock workspace manager."""
-    mock = MagicMock()
-    mock.get_current_context_prompt.return_value = "Test system prompt"
-    return mock
+from tests.mocks.session_state import SessionStateMock
+from tests.mocks.workspace_manager import mock_workspace_manager
 
 @pytest.fixture
 def mock_config_manager():

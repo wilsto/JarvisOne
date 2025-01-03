@@ -8,7 +8,8 @@ from src.ui.chat_ui import (
     init_chat_processor,
     display_chat
 )
-from tests.utils import mock_session_state, mock_database  # Import both fixtures
+from tests.mocks.session_state import SessionStateMock
+from tests.mocks.database import DatabaseMock  # Import both fixtures
 
 @pytest.fixture
 def mock_streamlit():
