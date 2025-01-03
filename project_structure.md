@@ -129,7 +129,7 @@ This document describes the purpose of each directory and file within the Jarvis
   - **Purpose**: Implements Retrieval-Augmented Generation (RAG) functionality for enhanced context-aware responses.
 
     #### `document_processor.py`
-    
+
     - **Purpose**: Handles document processing, chunking, embedding generation, and vector storage using ChromaDB.
     - **Key Components**:
       - `DocumentProcessor`: Core class managing document processing and vector operations
@@ -139,7 +139,7 @@ This document describes the purpose of each directory and file within the Jarvis
       - Semantic search functionality
 
     #### `data/vector_db/`
-    
+
     - **Purpose**: Persistent storage for document embeddings and vector indices
     - Organized by workspace for isolated document management
     - Uses ChromaDB for efficient vector storage and retrieval
@@ -154,15 +154,15 @@ This document describes the purpose of each directory and file within the Jarvis
     - `epub_handler.py`: Handler for EPUB e-books
 
     ### `src/rag/document_watcher/`
-    
+
     - **Purpose**: Monitors file system changes and manages document tracking.
-    
-    - `document_tracker.py`: 
+
+    - `document_tracker.py`:
       - SQLite-based document tracking
       - Status tracking (pending/processed/error/deleted)
       - Hash-based change detection
       - Thread-safe database operations
-    
+
     - `watcher.py`:
       - File system monitoring using Watchdog
       - Intelligent file scanning with change detection
@@ -179,19 +179,19 @@ This document describes the purpose of each directory and file within the Jarvis
       - Handles watcher lifecycle (start/stop)
 
     ### `src/rag/enhancer.py`
-    
+
     - **Purpose**: Enhances prompts with document context
 
     ### `src/rag/middleware.py`
-    
+
     - **Purpose**: RAG processing middleware
 
     ### `src/rag/processor.py`
-    
+
     - **Purpose**: Message processing interface
 
     ### `src/rag/query_handler.py`
-    
+
     - **Purpose**: Handles RAG queries
 
   #### `src/ui/`
@@ -237,13 +237,13 @@ This document describes the purpose of each directory and file within the Jarvis
 
 - **Purpose**: Ensures code quality through comprehensive testing.
 
-  #### `tests/core/`
+  #### `tests/integration/`
 
-  - **Purpose**: Validates core functionality through integration tests.
+  - **Purpose**: Contains integration tests that verify component interactions and system behavior.
 
   #### `tests/unit/`
 
-  - **Purpose**: Verifies individual component behavior through isolated tests.
+  - **Purpose**: Contains unit tests that verify individual component behavior in isolation.
 
   #### `tests/utils.py`
 
@@ -256,20 +256,22 @@ This document describes the purpose of each directory and file within the Jarvis
 ## New Components
 
 ### Interactions
+
 - `ui/interactions/`: Base classes and handlers for UI interactions
 
 ### Configuration
+
 - `.env.example`: Template for environment variables (API keys)
 
 ## Tech Stack
 
-* **Python**: Use Uv, Python 3.12.
-* **Streamlit**: Version 1.31+ for UI.
-* **LLMs**: Gemini 2.0, ChatGPT-4, Ollama, Anthropic.
-* **Testing**: Pytest + Streamlit Testing.
-* **Config**: ruamel.yaml.
-* **RAG Stack**:
-  * LangChain for text processing
-  * SentenceTransformers for embeddings
-  * ChromaDB for vector storage
-* **Future Technologies**: GTTS/SpeechRecognition for future voice capabilities.
+- **Python**: Use Uv, Python 3.12.
+- **Streamlit**: Version 1.31+ for UI.
+- **LLMs**: Gemini 2.0, ChatGPT-4, Ollama, Anthropic.
+- **Testing**: Pytest + Streamlit Testing.
+- **Config**: ruamel.yaml.
+- **RAG Stack**:
+  - LangChain for text processing
+  - SentenceTransformers for embeddings
+  - ChromaDB for vector storage
+- **Future Technologies**: GTTS/SpeechRecognition for future voice capabilities.

@@ -61,23 +61,23 @@
 ### Key Architectural Decisions
 
 1. **Modular Design**
-   - RAG system is independent of core chat functionality
-   - Document processor is isolated from vector storage concerns
-   - Workspace-specific collections maintain data isolation
+   * RAG system is independent of core chat functionality
+   * Document processor is isolated from vector storage concerns
+   * Workspace-specific collections maintain data isolation
 
 2. **Scalability Considerations**
-   - Asynchronous document processing
-   - Thread-safe vector operations
-   - Collection-per-workspace design
+   * Asynchronous document processing
+   * Thread-safe vector operations
+   * Collection-per-workspace design
 
 3. **Data Flow**
-   - Documents -> Processing -> Embeddings -> Storage
-   - Query -> Retrieval -> Context Enhancement -> Response
+   * Documents -> Processing -> Embeddings -> Storage
+   * Query -> Retrieval -> Context Enhancement -> Response
 
 4. **Extension Points**
-   - Pluggable embedding models
-   - Configurable importance levels
-   - Flexible chunking strategies
+   * Pluggable embedding models
+   * Configurable importance levels
+   * Flexible chunking strategies
 
 ## Core File Structure
 
