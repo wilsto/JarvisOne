@@ -38,12 +38,7 @@ class SystemPromptBuilder:
                 
             if config.context_prompt:
                 sections.append(config.context_prompt)
-                
-            if config.workspace_scope:
-                if config.debug:
-                    sections.append("=== Workspace Scope ===")
-                sections.append(f"Working in scope: {config.workspace_scope}")
-                
+            
             return "\n\n".join(sections)
             
         except Exception as e:

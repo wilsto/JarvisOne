@@ -72,21 +72,27 @@ class DocumentTracker:
         self,
         workspace_id: str,
         file_path: str,
-        status: str = 'pending',
+        hash_value: str,  # Required
+        status: str = 'pending',  # Restored default
         error_message: Optional[str] = None,
         last_modified: Optional[datetime] = None,
-        hash_value: Optional[str] = None
     ):
         """Update or insert a document record.
         
         Args:
             workspace_id: ID of the workspace
             file_path: Path to the document
-            status: Document status (pending, processed, error, deleted)
+            hash_value: Hash of the document content (required)
+            status: Document status (pending, processed, error, deleted), defaults to 'pending'
             error_message: Error message if status is error
             last_modified: Last modification time of the document
-            hash_value: Hash of the document content
+        
+        Raises:
+            ValueError: If hash_value is None or empty
         """
+        if not hash_value:
+            raise ValueError("Hash value is required for document tracking")
+            
         try:
             conn = self._get_connection()
             cursor = conn.cursor()

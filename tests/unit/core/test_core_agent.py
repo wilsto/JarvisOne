@@ -5,13 +5,12 @@ from unittest.mock import patch, MagicMock
 from core.workspace_manager import SpaceType, SpaceConfig
 from pathlib import Path
 from dataclasses import dataclass
-from tests.utils import mock_session_state  # Import the common fixture
+from tests.mocks.session_state import SessionStateMock  # Import from new location
 
 @dataclass
 class MockRole:
     name: str
-    role_name: str
-    role_description: str
+    description: str
     prompt_context: str
 
 class MockLLM(LLM):
@@ -68,8 +67,7 @@ def mock_workspace_manager():
         roles=[
             MockRole(
                 name="Coach",
-                role_name="Professional Coach",
-                role_description="An AI coach that helps users achieve their goals",
+                description="An AI coach that helps users achieve their goals",
                 prompt_context="Test role context"
             )
         ]
@@ -274,8 +272,7 @@ def test_core_agent_role_context(core_agent, mock_llm, mock_workspace_manager):
     mock_space_config.roles = [
         MockRole(
             name="Coach",
-            role_name="Professional Coach",
-            role_description="An AI coach that helps users achieve their goals",
+            description="An AI coach that helps users achieve their goals",
             prompt_context="Test role context"
         )
     ]
@@ -300,8 +297,7 @@ def test_core_agent_invalid_role(core_agent, mock_llm, mock_workspace_manager):
     mock_space_config.roles = [
         MockRole(
             name="Coach",
-            role_name="Professional Coach",
-            role_description="An AI coach that helps users achieve their goals",
+            description="An AI coach that helps users achieve their goals",
             prompt_context="Test role context"
         )
     ]
@@ -328,8 +324,7 @@ def test_prepare_prompt_config(core_agent, mock_workspace_manager):
     mock_space_config.roles = [
         MockRole(
             name="Coach",
-            role_name="Professional Coach",
-            role_description="An AI coach that helps users achieve their goals",
+            description="An AI coach that helps users achieve their goals",
             prompt_context="Test role context"
         )
     ]

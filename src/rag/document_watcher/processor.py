@@ -46,14 +46,16 @@ class DocumentChangeProcessor(StreamlitThread):
                         
                     try:
                         file_path = Path(doc['file_path'])
+                        current_hash = doc['hash']  # Get hash from document status
                         
                         # Skip if file no longer exists
                         if not file_path.exists():
                             logger.warning(f"File no longer exists: {file_path}")
                             self.doc_tracker.update_document(
-                                self.workspace_id,
-                                str(file_path),
+                                workspace_id=self.workspace_id,
+                                file_path=str(file_path),
                                 status='deleted',
+                                hash_value=current_hash,  # Keep the last known hash
                                 error_message="File no longer exists"
                             )
                             continue
@@ -67,18 +69,20 @@ class DocumentChangeProcessor(StreamlitThread):
                         
                         if success:
                             self.doc_tracker.update_document(
-                                self.workspace_id,
-                                str(file_path),
-                                status='processed'
+                                workspace_id=self.workspace_id,
+                                file_path=str(file_path),
+                                status='processed',
+                                hash_value=current_hash
                             )
                             logger.info(f"Successfully processed document: {file_path}")
                         else:
                             errors = self.doc_processor.get_errors()
                             error_msg = "; ".join(errors) if errors else "Unknown error"
                             self.doc_tracker.update_document(
-                                self.workspace_id,
-                                str(file_path),
+                                workspace_id=self.workspace_id,
+                                file_path=str(file_path),
                                 status='error',
+                                hash_value=current_hash,
                                 error_message=error_msg
                             )
                             logger.error(f"Failed to process document {file_path}: {error_msg}")
@@ -86,9 +90,10 @@ class DocumentChangeProcessor(StreamlitThread):
                     except Exception as e:
                         logger.error(f"Error processing document {doc['file_path']}: {e}")
                         self.doc_tracker.update_document(
-                            self.workspace_id,
-                            doc['file_path'],
+                            workspace_id=self.workspace_id,
+                            file_path=doc['file_path'],
                             status='error',
+                            hash_value=doc['hash'],  # Use original hash
                             error_message=str(e)
                         )
                 

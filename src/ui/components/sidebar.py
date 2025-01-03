@@ -65,8 +65,9 @@ def render_sidebar():
             # Log workspace change
             logger.info(f"Switched Workspace from {old_space} to {new_space}")
             
-            # Rerun to update UI
-            st.rerun()
+            # Only rerun if workspace actually changed
+            if old_space != new_space:
+                st.rerun()
         
         # Role Selection (if workspace has roles)
         workspace_manager = st.session_state.workspace_manager
@@ -124,7 +125,7 @@ def render_sidebar():
         if "llm_creativity" not in st.session_state:
             st.session_state.llm_creativity = 1  # Default to balanced
         if "llm_style" not in st.session_state:
-            st.session_state.llm_style = 1      # Default to Casual
+            st.session_state.llm_style = 1      # Default to Professional
         if "llm_length" not in st.session_state:
             st.session_state.llm_length = 1     # Default to balanced
                 
@@ -142,7 +143,7 @@ def render_sidebar():
             "🎭 Response Style",
             options=[0, 1, 2],
             value=st.session_state.llm_style,
-            format_func=lambda x: ["Professional", "Casual", "Fun"][x],
+            format_func=lambda x: ["Casual", "Professional", "Fun"][x],
             key="style_slider"
         )
 

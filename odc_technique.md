@@ -67,53 +67,56 @@
 ## Document Processing
 
 ### Supported Document Types
-- **Text Files**: `.txt`, `.json`, `.md`, `.markdown`
-- **Office Documents**: `.pdf`, `.docx`, `.xlsx`, `.pptx` (via MarkItDown)
-- **E-Books**: `.epub`
+
+* **Text Files**: `.txt`, `.json`, `.md`, `.markdown`
+* **Office Documents**: `.pdf`, `.docx`, `.xlsx`, `.pptx` (via MarkItDown)
+* **E-Books**: `.epub`
 
 ### Document Handlers
-- **TextHandler**: Processes plain text files, JSON, and Markdown
-- **MarkItDownHandler**: Converts Office documents to text
-- **EpubHandler**: Extracts text from EPUB e-books
+
+* **TextHandler**: Processes plain text files, JSON, and Markdown
+* **MarkItDownHandler**: Converts Office documents to text
+* **EpubHandler**: Extracts text from EPUB e-books
 
 ### Processing Strategy
-- Each handler validates file size and type
-- Text extraction preserves relevant content
-- Documents are chunked and embedded for search
+
+* Each handler validates file size and type
+* Text extraction preserves relevant content
+* Documents are chunked and embedded for search
 
 ## RAG Implementation
 
 ### Document Processing
 
-- **Chunking Strategy**
-  - Use RecursiveCharacterTextSplitter for consistent text segmentation
-  - Chunk size and overlap parameters must be tuned for optimal retrieval
-  - Handle empty files and invalid content gracefully
+* **Chunking Strategy**
+  * Use RecursiveCharacterTextSplitter for consistent text segmentation
+  * Chunk size and overlap parameters must be tuned for optimal retrieval
+  * Handle empty files and invalid content gracefully
 
 ### Vector Storage
 
-- **ChromaDB Integration**
-  - Persistent storage in workspace-specific collections
-  - Efficient embedding storage and retrieval
-  - Thread-safe operations for concurrent processing
+* **ChromaDB Integration**
+  * Persistent storage in workspace-specific collections
+  * Efficient embedding storage and retrieval
+  * Thread-safe operations for concurrent processing
 
 ### Performance Considerations
 
-- **Asynchronous Processing**
-  - Document processing runs in separate threads
-  - Non-blocking operations for UI responsiveness
-  - Optional wait-for-completion functionality
+* **Asynchronous Processing**
+  * Document processing runs in separate threads
+  * Non-blocking operations for UI responsiveness
+  * Optional wait-for-completion functionality
 
 ### Security & Isolation
 
-- **Workspace Separation**
-  - Strict isolation between workspace collections
-  - No cross-contamination of document embeddings
-  - Importance-level based document classification
+* **Workspace Separation**
+  * Strict isolation between workspace collections
+  * No cross-contamination of document embeddings
+  * Importance-level based document classification
 
 ### Dependencies
 
-- **Core Libraries**
-  - LangChain for text processing
-  - SentenceTransformers for embedding generation
-  - ChromaDB for vector storage
+* **Core Libraries**
+  * LangChain for text processing
+  * SentenceTransformers for embedding generation
+  * ChromaDB for vector storage

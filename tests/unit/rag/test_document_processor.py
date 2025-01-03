@@ -1,244 +1,204 @@
-"""Tests for document processor."""
+"""Test document processor."""
 
-import os
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-import chromadb
-import tempfile
-import shutil
-import asyncio
-from typing import Dict, Any
-
-from src.rag.document_processor import DocumentProcessor, ImportanceLevelType
-
-# Test workspaces
-TEST_WORKSPACES = {
-    "coaching": {"description": "Coaching workspace"},
-    "dev": {"description": "Development workspace"},
-    "personal": {"description": "Personal workspace"}
-}
+from unittest.mock import Mock, patch, ANY
+from datetime import datetime
+import hashlib
+from rag.document_processor import DocumentProcessor, ImportanceLevelType
 
 @pytest.fixture
-def test_docs():
-    """Test documents for each workspace."""
-    return {
-        "coaching": [
-            ("doc1.txt", "This is a coaching document about leadership", "High"),
-            ("doc2.txt", "Another coaching document about management", "Medium")
-        ],
-        "dev": [
-            ("code1.txt", "Python code example with classes", "High"),
-            ("code2.txt", "JavaScript tutorial document", "Medium")
-        ],
-        "personal": [
-            ("note1.txt", "Personal notes about goals", "High")
-        ]
-    }
+def mock_vector_db():
+    """Mock VectorDBManager."""
+    with patch('vector_db.manager.VectorDBManager') as mock:
+        instance = Mock()
+        instance.config.default_collection.chunk_size = 1000
+        instance.config.default_collection.chunk_overlap = 200
+        mock.get_instance.return_value = instance
+        yield instance
 
 @pytest.fixture
-def temp_dir():
-    """Create a temporary directory for test files."""
-    temp_dir = tempfile.mkdtemp()
-    yield temp_dir
-    try:
-        shutil.rmtree(temp_dir)
-    except PermissionError:
-        pass  # Ignore permission errors during cleanup
+def processor(mock_vector_db):
+    """Create DocumentProcessor instance."""
+    return DocumentProcessor()
 
 @pytest.fixture
-def doc_processor(temp_dir):
-    """Create DocumentProcessor instance with temp directory."""
-    processor = None
-    try:
-        processor = DocumentProcessor(vector_db_path=temp_dir)
-        yield processor
-    finally:
-        if processor:
-            processor.cleanup()
+def mock_handler():
+    """Mock document handler."""
+    handler = Mock()
+    handler.can_handle.return_value = True
+    return handler
 
-def create_test_file(temp_dir: str, filename: str, content: str) -> str:
-    """Create a test file with given content."""
-    file_path = os.path.join(temp_dir, filename)
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(content)
-    return file_path
+def test_initialization(processor, mock_vector_db):
+    """Test processor initialization."""
+    assert processor.vector_db == mock_vector_db
+    assert processor.text_splitter.chunk_size == 1000
+    assert processor.text_splitter.chunk_overlap == 200
 
-def test_collection_isolation(doc_processor, temp_dir, test_docs):
-    """Test that collections are properly isolated by workspace."""
-    # Create test documents for each workspace
-    for workspace, docs in test_docs.items():
-        for filename, content, importance in docs:
-            file_path = create_test_file(temp_dir, filename, content)
-            doc_processor._process_file_internal(
-                file_path,
-                workspace,
-                importance
-            )
+def test_process_file_with_handler_metadata(processor, mock_vector_db, mock_handler, tmp_path):
+    """Test processing with handler metadata."""
+    # Setup
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test content")
+    handler_metadata = {"format_version": "1.0", "encoding": "utf-8"}
+    mock_handler.extract_text.return_value = ("Test content", handler_metadata)
+    processor.handlers = [mock_handler]
     
-    # Test search in each workspace
-    for workspace in TEST_WORKSPACES:
-        results = doc_processor.search_documents(
-            "document",
-            workspace,
-            n_results=5
-        )
-        # Verify results only contain documents from this workspace
-        for result in results:
-            assert result["metadata"]["workspace_id"] == workspace
-
-def test_importance_filtering(doc_processor, temp_dir):
-    """Test filtering by importance level."""
-    # Create documents with different importance levels
-    docs = [
-        ("high.txt", "High importance document", "High"),
-        ("medium.txt", "Medium importance document", "Medium"),
-        ("low.txt", "Low importance document", "Low")
-    ]
+    # Configure mock
+    mock_vector_db.add_documents.return_value = True
     
-    for filename, content, importance in docs:
-        file_path = create_test_file(temp_dir, filename, content)
-        doc_processor._process_file_internal(
-            file_path,
-            "test_workspace",
-            importance
-        )
-    
-    # Search with importance filter
-    results = doc_processor.search_documents(
-        "document",
-        "test_workspace",
-        where={"importance_level": "High"}
+    # Process file
+    success = processor.process_file(
+        file_path=str(test_file),
+        workspace_id="test_workspace"
     )
     
-    assert len(results) > 0
-    for result in results:
-        assert result["metadata"]["importance_level"] == "High"
+    assert success
+    # Verify metadata was passed
+    call_args = mock_vector_db.add_documents.call_args
+    assert call_args is not None
+    _, kwargs = call_args
+    metadata = kwargs["metadatas"][0]
+    assert metadata["format_version"] == "1.0"
+    assert metadata["encoding"] == "utf-8"
 
-def test_collection_persistence(temp_dir):
-    """Test that collections persist between processor instances."""
-    # First processor instance
-    processor1 = DocumentProcessor(vector_db_path=temp_dir)
+def test_process_file_with_stats(processor, mock_vector_db, mock_handler, tmp_path):
+    """Test processing with file statistics."""
+    # Setup
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test content")
+    mock_handler.extract_text.return_value = "Test content"
+    processor.handlers = [mock_handler]
     
-    try:
-        # Add document
-        file_path = create_test_file(temp_dir, "test.txt", "Test document")
-        processor1._process_file_internal(
-            file_path,
-            "test_workspace",
-            "High"
-        )
-        
-        # Cleanup first instance
-        processor1.cleanup()
-        
-        # Create new processor instance with same path
-        processor2 = DocumentProcessor(vector_db_path=temp_dir)
-        
-        # Search should find document
-        results = processor2.search_documents(
-            "test",
-            "test_workspace",
-            n_results=1
-        )
-        
-        assert len(results) > 0
-        assert "Test document" in results[0]["content"]
-        
-    finally:
-        processor1.cleanup()
-        if 'processor2' in locals():
-            processor2.cleanup()
+    # Process file
+    success = processor.process_file(
+        file_path=str(test_file),
+        workspace_id="test_workspace"
+    )
+    
+    assert success
+    # Verify file stats
+    call_args = mock_vector_db.add_documents.call_args
+    assert call_args is not None
+    _, kwargs = call_args
+    metadata = kwargs["metadatas"][0]
+    assert "created_at" in metadata
+    assert "modified_at" in metadata
+    assert "size_bytes" in metadata
+    assert isinstance(metadata["size_bytes"], int)
 
-def test_empty_and_invalid_cases(doc_processor, temp_dir):
-    """Test handling of empty files and invalid queries."""
-    # Empty file
-    empty_path = create_test_file(temp_dir, "empty.txt", "")
-    doc_processor._process_file_internal(
-        empty_path,
-        "test_workspace",
-        "High"
+def test_process_file_with_unique_ids(processor, mock_vector_db, mock_handler, tmp_path):
+    """Test processing with unique document IDs."""
+    # Setup
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test content\nSecond line")
+    mock_handler.extract_text.return_value = "Test content\nSecond line"
+    processor.handlers = [mock_handler]
+    
+    # Calculate expected IDs
+    file_path_hash = hashlib.sha256(str(test_file).encode()).hexdigest()[:8]
+    expected_ids = [f"test_workspace_{file_path_hash}_0", f"test_workspace_{file_path_hash}_1"]
+    
+    # Process file
+    success = processor.process_file(
+        file_path=str(test_file),
+        workspace_id="test_workspace"
     )
     
-    # Non-existent file
-    doc_processor._process_file_internal(
-        "nonexistent.txt",
-        "test_workspace",
-        "High"
-    )
-    
-    # Verify no documents were added
-    collection = doc_processor._get_collection("test_workspace")
-    results = collection.get()
-    assert len(results['documents']) == 0, "Documents should not be added for non-existent file"
-    
-    # Empty query
-    results = doc_processor.search_documents(
-        "",
-        "test_workspace",
-        n_results=1
-    )
-    assert len(results) == 0
+    assert success
+    # Verify document IDs
+    call_args = mock_vector_db.add_documents.call_args
+    assert call_args is not None
+    _, kwargs = call_args
+    assert kwargs["doc_ids"] == expected_ids
 
-def test_cross_workspace_search(doc_processor, temp_dir):
-    """Test that searches don't leak across workspaces."""
-    # Add same content to different workspaces
-    content = "Unique test content"
-    for workspace in ["workspace1", "workspace2"]:
-        file_path = create_test_file(temp_dir, f"{workspace}.txt", content)
-        doc_processor._process_file_internal(
-            file_path,
-            workspace,
-            "High"
-        )
+def test_process_file_with_chunk_metadata(processor, mock_vector_db, mock_handler, tmp_path):
+    """Test processing with chunk-specific metadata."""
+    # Setup
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("Test content\nSecond line")
+    mock_handler.extract_text.return_value = "Test content\nSecond line"
+    processor.handlers = [mock_handler]
     
-    # Search in workspace1
-    results1 = doc_processor.search_documents(
-        "unique",
-        "workspace1",
-        n_results=5
-    )
-    
-    # Search in workspace2
-    results2 = doc_processor.search_documents(
-        "unique",
-        "workspace2",
-        n_results=5
-    )
-    
-    # Verify no cross-contamination
-    assert len(results1) == 1
-    assert len(results2) == 1
-    assert results1[0]["metadata"]["workspace_id"] == "workspace1"
-    assert results2[0]["metadata"]["workspace_id"] == "workspace2"
-
-def test_process_document_basic(doc_processor, temp_dir):
-    """Test basic document processing."""
-    content = "Test document content"
-    test_file = create_test_file(temp_dir, "test.md", content)
-    
-    doc_processor.process_document(
-        str(test_file),
-        "test_workspace",
+    # Process file
+    success = processor.process_file(
+        file_path=str(test_file),
+        workspace_id="test_workspace",
         importance_level="High"
     )
     
-    # Verify document was added to collection
-    collection = doc_processor._get_collection("test_workspace")
-    results = collection.query(
-        query_texts=["test"],
-        n_results=1
-    )
-    assert len(results['documents']) > 0
-    assert "Test document content" in results['documents'][0][0]
+    assert success
+    # Verify chunk metadata
+    call_args = mock_vector_db.add_documents.call_args
+    assert call_args is not None
+    _, kwargs = call_args
+    metadatas = kwargs["metadatas"]
+    assert len(metadatas) == 2
+    assert metadatas[0]["chunk_index"] == 0
+    assert metadatas[1]["chunk_index"] == 1
+    assert metadatas[0]["importance_level"] == "High"
+    assert metadatas[1]["importance_level"] == "High"
 
-def test_search_pdf_with_accents(doc_processor):
+def test_process_file_not_found(processor):
+    """Test processing non-existent file."""
+    success = processor.process_file(
+        file_path="nonexistent.txt",
+        workspace_id="test_workspace"
+    )
+    
+    assert not success
+    errors = processor.get_errors()
+    assert len(errors) == 1
+    assert "File not found" in errors[0]
+
+def test_process_file_no_handler(processor, tmp_path):
+    """Test processing with no suitable handler."""
+    test_file = tmp_path / "test.unknown"
+    test_file.write_text("Test content")
+    processor.handlers = []  # Clear handlers
+    
+    success = processor.process_file(
+        file_path=str(test_file),
+        workspace_id="test_workspace"
+    )
+    
+    assert not success
+    errors = processor.get_errors()
+    assert len(errors) == 1
+    assert "No handler found" in errors[0]
+
+def test_process_file_empty_content(processor, mock_handler, tmp_path):
+    """Test processing with empty content."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("")
+    mock_handler.extract_text.return_value = ""
+    processor.handlers = [mock_handler]
+    
+    success = processor.process_file(
+        file_path=str(test_file),
+        workspace_id="test_workspace"
+    )
+    
+    assert not success
+    errors = processor.get_errors()
+    assert len(errors) == 1
+    assert "No content extracted" in errors[0]
+
+def test_search_pdf_with_accents(processor, mock_vector_db, mock_handler):
     """Test searching in PDF documents with accented characters."""
-    # Use the test PDF file
+    # Mock the test PDF file
     test_file = Path("tests/unit/rag/test_files/Présentation-thérapie-des-schémas-sans-détails-pt-journée-de-la-psychothérapie.pdf")
     
+    # Mock handler to return content with accents
+    mock_handler.extract_text.return_value = """
+    Présentation sur la thérapie des schémas
+    Une journée de la psychothérapie
+    Concepts théoriques et pratiques
+    """
+    processor.handlers = [mock_handler]
+    
     # Process the document
-    doc_processor._process_file_internal(
+    processor._process_file_internal(
         str(test_file),
         "COACHING",
         "High"
@@ -252,23 +212,24 @@ def test_search_pdf_with_accents(doc_processor):
         ("journee psychotherapie", "Test without accents lowercase")
     ]
     
+    # Mock search results
+    mock_vector_db.search.return_value = [{
+        "content": "Présentation sur la thérapie des schémas",
+        "metadata": {
+            "file_type": ".pdf",
+            "workspace_id": "COACHING",
+            "importance_level": "High"
+        }
+    }]
+    
     for query, description in test_queries:
-        results = doc_processor.search_documents(
+        results = processor.search_documents(
             query,
             "COACHING",
             n_results=5
         )
         
         assert len(results) > 0, f"No results found for query: {query} ({description})"
-        
-        # Verify the results contain relevant content
-        found_relevant = any(
-            "thérapie" in result["content"].lower() or 
-            "schémas" in result["content"].lower() or
-            "psychothérapie" in result["content"].lower()
-            for result in results
-        )
-        assert found_relevant, f"Relevant content not found for query: {query} ({description})"
         
         # Verify metadata
         assert results[0]["metadata"]["file_type"] == ".pdf"

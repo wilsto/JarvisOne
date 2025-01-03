@@ -7,25 +7,25 @@ logger = logging.getLogger(__name__)
 # Creativity levels mapped to temperature values
 CREATIVITY_TEMPERATURES = {
     0: 0.1,  # Strict: Very focused and deterministic
-    1: 0.7,  # Balanced: Good mix of consistency and variety
-    2: 1.2   # Creative: More randomness and exploration
+    1: 0.5,  # Balanced: Good mix of consistency and variety
+    2: 1.0   # Creative: More randomness and exploration
 }
 
 # Core characteristics variations based on creativity level
 CREATIVITY_PROMPTS = {
-    0: """  # Strict (Temperature: 0.1)
+    0: """  # Strict 
 - Precise and factual: Provide accurate, evidence-based responses
 - Conservative: Stay within established patterns and proven solutions
 - Methodical: Follow structured approaches and best practices
 - Verification-focused: Double-check facts and assumptions
 """,
-    1: """  # Balanced (Temperature: 0.7)
+    1: """  # Balanced 
 - Concise and efficient: Provide short, direct, and to-the-point responses
 - Pragmatic: Focus on practical solutions and actionable information
 - Proactive: Anticipate the user's needs where possible
 - Clarifying: Ask questions when context is ambiguous
 """,
-    2: """  # Creative (Temperature: 1.2)
+    2: """  # Creative 
 - Innovative: Explore novel solutions and unique approaches
 - Expansive thinking: Consider multiple perspectives and possibilities
 - Experimental: Suggest new ideas while maintaining practicality
@@ -65,6 +65,8 @@ LENGTH_MODIFIERS = {
 GENERIC_UNCERTAINTY_RESPONSE = """
 If you are unable to confidently answer the question, state "I am not sure" instead of fabricating a response.
 """
+
+LANGUAGE_PROMPT = "!Important! Respond in the user's language unless explicitly specified otherwise."
 
 def modify_prompt_by_preferences(creativity_level: int, style_level: int, length_level: int) -> str:
     """Modify the prompt based on user preferences from sliders.
@@ -107,7 +109,7 @@ def get_llm_temperature() -> float:
     """Get the LLM temperature based on current creativity level.
     
     Returns:
-        float: Temperature value between 0.1 and 1.2
+        float: Temperature value between 0.1 and 1
     """
     import streamlit as st
     creativity = st.session_state.get('llm_creativity', 1)

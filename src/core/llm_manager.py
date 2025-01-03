@@ -162,8 +162,7 @@ class GeminiLLM(LLM):
             raise ValueError("Google API key not found in environment")
         self.timeout = DEFAULT_READ_TIMEOUT
         genai.configure(
-            api_key=API_KEYS['google'],
-            timeout=self.timeout
+            api_key=API_KEYS['google']
         )
         self.client = GenerativeModel(model)
         

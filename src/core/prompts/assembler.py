@@ -76,11 +76,6 @@ class PromptAssembler:
             if system_prompt:
                 sections.append(system_prompt)
                 
-            # Preferences (optional)
-            if config.preferences_config:
-                prefs = PreferencesBuilder.build(config.preferences_config)
-                if prefs:
-                    sections.append(prefs)
                     
             # Workspace context (optional)
             if config.workspace_config:
@@ -99,17 +94,24 @@ class PromptAssembler:
                 history = MessageHistoryBuilder.build(config.message_history_config)
                 if history:
                     sections.append(history)
-                    
-            # Current message (required)
-            current_msg = CurrentMessageBuilder.build(config.current_message_config)
-            if current_msg:
-                sections.append(current_msg)
-                    
+
             # RAG context (optional)
             if config.rag_config:
                 rag_ctx = RAGContextBuilder.build(config.rag_config)
                 if rag_ctx:
                     sections.append(rag_ctx)
+
+            # Preferences (optional)
+            if config.preferences_config:
+                preferences = PreferencesBuilder.build(None)  # Force using session state
+                if preferences:
+                    sections.append(preferences)
+
+            # Current message (required)
+            current_msg = CurrentMessageBuilder.build(config.current_message_config)
+            if current_msg:
+                sections.append(current_msg)
+
                     
             return "\n\n".join(sections)
             

@@ -4,7 +4,8 @@ import pytest
 import logging
 from unittest.mock import Mock, patch
 from src.features.chat_processor import ChatProcessor
-from tests.utils import mock_session_state, mock_database  # Import both fixtures
+from tests.mocks.session_state import SessionStateMock
+from tests.mocks.database import DatabaseMock  # Import both mocks
 
 @pytest.fixture
 def mock_orchestrator():

@@ -17,8 +17,8 @@ logging:
 
 # LLM Configuration
 llm:
-  provider: Ollama (Local)
-  model: mistral:latest
+  provider: Google
+  model: gemini-2.0-flash-exp
   max_tokens: 2000
   temperature: 0.7
 
@@ -45,7 +45,7 @@ vector_db:
 # RAG Configuration
 rag:
   agents:
-  - chat_agent
+    - chat_agent
   config:
     importance_filter: High
     max_results: 3
@@ -54,14 +54,14 @@ rag:
   document_processing:
     max_file_size_mb: 10
     supported_extensions:
-    - .txt
-    - .pdf
-    - .docx
-    - .xlsx
-    - .pptx
-    - .epub
-    - .md
-    - .json
+      - .txt
+      - .pdf
+      - .docx
+      - .xlsx
+      - .pptx
+      - .epub
+      - .md
+      - .json
   enabled: true
 
 # Data Directory

@@ -6,12 +6,12 @@ import streamlit as st
 from datetime import datetime
 from src.utils.logging_config import StreamlitHandler, setup_logging, get_logs
 from unittest.mock import patch, MagicMock
-from tests.utils import MockSessionState
+from tests.mocks.session_state import SessionStateMock
 
 @pytest.fixture
 def mock_session_state():
     """Mock Streamlit's session state."""
-    with patch('streamlit.session_state', new_callable=MockSessionState) as mock_state:
+    with patch('streamlit.session_state', new_callable=SessionStateMock) as mock_state:
         yield mock_state
 
 @pytest.fixture

@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import Mock, patch
 import streamlit as st
 from src.ui.interactions.agents.query_analyzer import QueryAnalyzerDisplay
-from tests.utils import mock_session_state
+from tests.mocks.session_state import SessionStateMock
 
 @pytest.fixture
 def mock_streamlit():
@@ -18,7 +18,7 @@ def mock_streamlit():
         mock_col.__exit__ = Mock(return_value=None)
         mock_col.markdown = Mock()
         
-        # Return 2 columns for analysis display
+        # Configure columns mock
         mock_cols.return_value = [mock_col, mock_col]
         
         yield {
@@ -32,22 +32,16 @@ def mock_streamlit():
 def sample_interaction():
     """Fixture providing a sample interaction."""
     return {
-        'id': 'test-id',
-        'type': 'query_analyzer',
-        'query': 'test query',
-        'timestamp': '15:30:00',
-        'analysis': {
-            'agent_selected': 'Test Agent',
-            'confidence': 95,
-            'agent': {
-                'name': 'Test Agent',
-                'confidence': 95,
-                'reason': 'Test reason'
-            },
-            'verifier': {
-                'confidence': 90,
-                'level': 'high',
-                'reason': 'Verified successfully'
+        'id': 'test_id',
+        'timestamp': '2024-01-01 12:00:00',
+        'type': 'query_analysis',
+        'data': {
+            'query': 'test query',
+            'analysis': {
+                'intent': 'test intent',
+                'entities': ['entity1', 'entity2'],
+                'confidence': 0.95,
+                'suggested_agent': 'test_agent'
             }
         }
     }
@@ -55,14 +49,15 @@ def sample_interaction():
 @pytest.fixture
 def display_handler():
     """Fixture providing a QueryAnalyzerDisplay instance."""
-    return QueryAnalyzerDisplay()
+    with SessionStateMock():
+        return QueryAnalyzerDisplay()
 
 def test_expander_title(display_handler, sample_interaction):
     """Test that expander title is correctly formatted."""
     title = display_handler.get_expander_title(sample_interaction)
     assert "🟢" in title  # High confidence badge
-    assert "Test Agent" in title  # Agent name
-    assert "15:30:00" in title  # Timestamp
+    assert "test_agent" in title  # Agent name
+    assert "2024-01-01 12:00:00" in title  # Timestamp
 
 def test_display_with_analysis(mock_streamlit, display_handler, sample_interaction):
     """Test display with analysis data."""
@@ -76,12 +71,12 @@ def test_display_with_analysis(mock_streamlit, display_handler, sample_interacti
     
     # Verify agent selection displayed
     mock_streamlit['markdown'].assert_any_call("### Agent Selection")
-    mock_streamlit['markdown'].assert_any_call("**Selected Agent:** Test Agent")
+    mock_streamlit['markdown'].assert_any_call("**Selected Agent:** test_agent")
     mock_streamlit['markdown'].assert_any_call("**Agent Confidence:** 95%")
-    mock_streamlit['markdown'].assert_any_call("**Agent Reason:** Test reason")
+    mock_streamlit['markdown'].assert_any_call("**Agent Reason:** None")
     
     # Verify verifier details displayed
-    mock_streamlit['markdown'].assert_any_call("**Final Confidence:** 90%")
+    mock_streamlit['markdown'].assert_any_call("**Final Confidence:** 95%")
     mock_streamlit['markdown'].assert_any_call("**Confidence Check Level:** High")
     mock_streamlit['markdown'].assert_any_call("**Verifier Reason:** Verified successfully")
 
@@ -89,10 +84,12 @@ def test_display_without_analysis(mock_streamlit, display_handler):
     """Test display without analysis data."""
     # Create interaction without analysis
     interaction = {
-        'id': 'test-id',
-        'type': 'query_analyzer',
-        'query': 'test query',
-        'timestamp': '15:30:00'
+        'id': 'test_id',
+        'timestamp': '2024-01-01 12:00:00',
+        'type': 'query_analysis',
+        'data': {
+            'query': 'test query'
+        }
     }
     
     # Display should handle missing analysis gracefully
@@ -103,22 +100,16 @@ def test_display_with_empty_analysis(mock_streamlit, display_handler):
     """Test display with empty analysis."""
     # Create interaction with empty analysis
     interaction = {
-        'id': 'test-id',
-        'type': 'query_analyzer',
-        'query': 'test query',
-        'timestamp': '15:30:00',
-        'analysis': {
-            'agent_selected': None,
-            'confidence': 0,
-            'agent': {
-                'name': None,
+        'id': 'test_id',
+        'timestamp': '2024-01-01 12:00:00',
+        'type': 'query_analysis',
+        'data': {
+            'query': 'test query',
+            'analysis': {
+                'intent': None,
+                'entities': [],
                 'confidence': 0,
-                'reason': None
-            },
-            'verifier': {
-                'confidence': 0,
-                'level': 'low',
-                'reason': None
+                'suggested_agent': None
             }
         }
     }

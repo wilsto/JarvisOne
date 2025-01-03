@@ -1,20 +1,10 @@
-"""Test utilities."""
+"""Database mock for testing."""
 
-import pytest
-from unittest.mock import Mock, patch
-import streamlit as st
 from datetime import datetime
 from typing import Dict, List, Optional
 from dataclasses import dataclass
-from enum import Enum, auto
 
-class SpaceType(Enum):
-    """Enum for workspace types."""
-    AGNOSTIC = auto()
-    COACHING = auto()
-    DEV = auto()
-    PERSONAL = auto()
-    WORK = auto()
+from ..types.workspace import SpaceType
 
 @dataclass
 class Conversation:
@@ -25,13 +15,13 @@ class Conversation:
     created_at: str
     updated_at: str
 
-class MockDatabase:
+class DatabaseMock:
     """Mock class for conversation database.
     
-    Cette classe simule une base de données de conversations avec :
-    1. Une table conversations pour stocker les métadonnées des conversations
-    2. Une table messages pour stocker les messages de chaque conversation
-    3. Des méthodes pour créer, lire et mettre à jour les conversations et messages
+    Simulates a database of conversations with:
+    1. A conversations table for storing conversation metadata
+    2. A messages table for storing messages of each conversation
+    3. Methods for creating, reading and updating conversations and messages
     """
     def __init__(self):
         self.conversations: Dict[str, Conversation] = {}
@@ -103,75 +93,3 @@ class MockDatabase:
         self.messages.clear()
         self._next_conversation_id = 1
         self._next_message_id = 1
-
-@pytest.fixture
-def mock_database():
-    """Fixture to provide a mock database.
-    
-    This fixture:
-    1. Creates a new MockDatabase instance
-    2. Yields it for the test
-    3. Clears all data after the test
-    """
-    db = MockDatabase()
-    yield db
-    db.clear()
-
-class MockSessionState(dict):
-    """Mock class for Streamlit's session_state.
-    
-    This class simulates the behavior of Streamlit's session_state by:
-    1. Allowing attribute-style access (session_state.key)
-    2. Returning None for undefined attributes
-    3. Storing values in the underlying dictionary
-    4. Supporting attribute deletion (del session_state.key)
-    """
-    def __init__(self):
-        super().__init__()
-        # Initialize common session state attributes
-        self.interactions = []
-        
-        # Initialize workspace manager mock
-        self.workspace_manager = Mock()
-        self.workspace_manager.get_current_context_prompt.return_value = "Test system prompt"
-        
-        # Initialize other session state variables
-        self.messages = []
-        self.current_conversation_id = None
-    
-    def __setattr__(self, key, value):
-        self[key] = value
-    
-    def __getattr__(self, key):
-        if key not in self:
-            return None
-        return self[key]
-    
-    def __delattr__(self, key):
-        if key in self:
-            del self[key]
-
-@pytest.fixture
-def mock_session_state():
-    """Fixture to provide a mock Streamlit session state.
-    
-    This fixture:
-    1. Removes any existing session_state
-    2. Creates a new MockSessionState instance
-    3. Restores the original session_state after the test
-    """
-    # Save original session state if it exists
-    original_session_state = getattr(st, 'session_state', None)
-    
-    # Reset session state before each test
-    if hasattr(st, 'session_state'):
-        delattr(st, 'session_state')
-    
-    # Create new mock session state
-    st.session_state = MockSessionState()
-    
-    yield st.session_state
-    
-    # Restore original session state
-    if original_session_state is not None:
-        st.session_state = original_session_state

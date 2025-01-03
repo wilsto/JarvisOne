@@ -40,7 +40,6 @@ class RAGContextBuilder:
             
             if config.debug:
                 sections.append("=== RAG Context ===")
-                sections.append(f"Query: {config.query}")
                 
             if not config.documents:
                 return ""
